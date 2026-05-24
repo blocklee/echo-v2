@@ -1,0 +1,105 @@
+雨娃，我把 useWallet.js 代码直接发这里，你复制到你的项目里。
+
+useWallet.js 代码：
+
+```javascript
+import { useState, useCallback } from 'react';
+import { BrowserProvider } from 'ethers';
+import { CONTRACTS, CHAIN_ID, CHAIN_NAME } from '../contracts/config';
+
+const QITMEER_RPC = 'https://qng.rpc.qitmeer.io';
+
+export function useWallet() {
+  const [provider, setProvider] = useState(null);
+  const [signer, setSigner] = useState(null);
+  const [address, setAddress] = useState(null);
+  const [balance, setBalance] = useState(null);
+  const [connecting, setConnecting] = useState(false);
+  const [error, setError] = useState(null);
+
+  const connect = useCallback(async () => {
+    setConnecting(true);
+    setError(null);
+    
+    try {
+      if (!window.ethereum) {
+        throw new Error('No wallet detected. Please install MetaMask.');
+      }
+      
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      
+      if (!accounts || accounts.length === 0) {
+        throw new Error('No accounts found.');
+      }
+      
+      const addr = accounts[0];
+      const web3Provider = new BrowserProvider(window.ethereum);
+      const web3Signer = await web3Provider.getSigner();
+      const network = await web3Provider.getNetwork();
+      
+      if (Number(network.chainId) !== CHAIN_ID) {
+        console.warn(`Connected to chain ${network.chainId}, expected ${CHAIN_ID}`);
+      }
+      
+      const balanceWei = await web3Provider.getBalance(addr);
+      const balanceFormatted = Number(balanceWei) / 1e18;
+      
+      setProvider(web3Provider);
+      setSigner(web3Signer);
+      setAddress(addr);
+      setBalance(balanceFormatted);
+      
+    } catch (err) {
+      setError(err.message || 'Failed to connect wallet');
+    } finally {
+      setConnecting(false);
+    }
+  }, []);
+
+  const disconnect = useCallback(() => {
+    setProvider(null);
+    setSigner(null);
+    setAddress(null);
+    setBalance(null);
+    setError(null);
+  }, []);
+
+  const switchToQitmeer = useCallback(async () => {
+    if (!window.ethereum) return;
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0x' + CHAIN_ID.toString(16) }],
+      });
+    } catch (switchError) {
+      if (switchError.code === 4902) {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: '0x32D',
+              chainName: CHAIN_NAME,
+              rpcUrls: ['https://qng.rpc.qitmeer.io'],
+              blockExplorerUrls: ['https://qng.meerscan.io'],
+              nativeCurrency: { name: 'MEER', symbol: 'MEER', decimals: 18 },
+            }],
+          });
+        } catch (addError) { console.error('Failed to add Qitmeer chain:', addError); }
+      }
+    }
+  }, []);
+
+  if (window.ethereum && !window.ethereum._eventsBound) {
+    window.ethereum.on('accountsChanged', (accounts) => {
+      if (accounts.length === 0) { disconnect(); } else { setAddress(accounts[0]); }
+    });
+    window.ethereum.on('chainChanged', () => { window.location.reload(); });
+    window.ethereum._eventsBound = true;
+  }
+
+  return { provider, signer, address, balance, connecting, error, connect, disconnect, switchToQitmeer, isConnected: !!address };
+}
+```
+
+这是 useWallet.js 的完整代码，下一条发 useCase.js
+@雨娃
