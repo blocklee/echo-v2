@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统性漏洞清单 v0.2 · ECHO 协议</title>
+    <style>
+        :root {
+            --paper: #f5f3ef;
+            --ink-dark: #2c3e3a;
+            --ink-medium: #4A7C6F;
+            --ink-light: #7a8b82;
+            --vermilion: #c44536;
+            --gold: #c4a35a;
+            --phase1: rgba(196,69,54,0.12);
+            --phase2: rgba(196,163,90,0.15);
+            --phase3: rgba(74,124,111,0.10);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "LXGW WenKai", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: var(--paper);
+            color: var(--ink-dark);
+            line-height: 1.8;
+            padding: 40px 20px;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        .header {
+            text-align: center;
+            padding: 40px 0 30px;
+            border-bottom: 2px solid var(--ink-medium);
+            margin-bottom: 40px;
+        }
+        .header h1 {
+            font-size: 1.6rem;
+            color: var(--ink-dark);
+            margin-bottom: 8px;
+        }
+        .header .subtitle {
+            color: var(--ink-light);
+            font-size: 0.9rem;
+        }
+        .version-badge {
+            display: inline-block;
+            background: var(--ink-medium);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            margin-top: 12px;
+        }
+
+        .section { margin-bottom: 40px; }
+        .section-title {
+            font-size: 1.3rem;
+            color: var(--ink-medium);
+            margin-bottom: 20px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(74,124,111,0.3);
+        }
+
+        /* 分类矩阵 */
+        .category-grid {
+            display: grid;
+            grid-template-columns: 140px 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .category-label {
+            background: var(--ink-medium);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+        .category-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .vuln-chip {
+            background: white;
+            border: 1px solid rgba(44,62,58,0.15);
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: var(--ink-dark);
+        }
+        .vuln-chip .id { color: var(--vermilion); font-weight: 600; margin-right: 4px; }
+
+        /* 表格 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        th {
+            background: var(--ink-medium);
+            color: white;
+            padding: 12px 14px;
+            text-align: left;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        td {
+            padding: 12px 14px;
+            border-bottom: 1px solid rgba(44,62,58,0.08);
+            font-size: 0.85rem;
+        }
+        tr:hover td { background: rgba(74,124,111,0.05); }
+        tr:last-child td { border-bottom: none; }
+
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .tag-p0 { background: var(--phase1); color: var(--vermilion); }
+        .tag-p1 { background: var(--phase2); color: #8a6d1a; }
+        .tag-p2 { background: var(--phase3); color: var(--ink-medium); }
+        .tag-blocker { background: var(--phase1); color: var(--vermilion); }
+        .tag-experience { background: var(--phase2); color: #8a6d1a; }
+        .tag-theory { background: var(--phase3); color: var(--ink-medium); }
+
+        .impact-cell {
+            font-weight: 600;
+        }
+        .impact-yes { color: var(--vermilion); }
+        .impact-maybe { color: var(--gold); }
+        .impact-no { color: var(--ink-medium); }
+
+        /* 依赖图 */
+        .dep-flow {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        }
+        .dep-line {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+        .dep-line .arrow { color: var(--ink-light); }
+        .dep-line .node {
+            background: rgba(74,124,111,0.1);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        .dep-line .node.root { background: var(--phase1); color: var(--vermilion); font-weight: 600; }
+
+        /* Phase 建议 */
+        .phase-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+            border-left: 4px solid;
+        }
+        .phase-1 { border-left-color: var(--vermilion); }
+        .phase-2 { border-left-color: var(--gold); }
+        .phase-3 { border-left-color: var(--ink-medium); }
+        .phase-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .phase-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .note {
+            background: rgba(74,124,111,0.08);
+            border-left: 3px solid var(--ink-medium);
+            padding: 12px 16px;
+            border-radius: 0 6px 6px 0;
+            font-size: 0.85rem;
+            color: var(--ink-light);
+            margin-bottom: 20px;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--ink-light);
+            font-size: 0.8rem;
+            border-top: 1px solid rgba(44,62,58,0.1);
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>系统性漏洞清单</h1>
+            <div class="subtitle">分类 · 依赖 · 影响 · 执行建议</div>
+            <div class="version-badge">v0.2 · 2026-05-18</div>
+        </div>
+
+        <div class="note">
+            <strong>来源：</strong>基于 2026-05-16 雨娃 × Talus × Cat.Black × M77Asisstant 四 Agent 协作产出 v0.1，雨娃独立分析 v0.2。
+            <br><strong>范围：</strong>16 个 P1/P2 漏洞 + 3 个深化问题，按根因分类、依赖关系、MVP 影响排序。
+        </div>
+
+        <!-- B1: 根因分类 -->
+        <div class="section">
+            <div class="section-title">B1 · 根因分类矩阵</div>
+            
+            <div class="category-grid">
+                <div class="category-label">⚙️ 机制设计</div>
+                <div class="category-items">
+                    <span class="vuln-chip"><span class="id">#6</span>档位间隙</span>
+                    <span class="vuln-chip"><span class="id">#8</span>后悔期缺失</span>
+                    <span class="vuln-chip"><span class="id">#15</span>冷启动毕业底线</span>
+                    <span class="vuln-chip"><span class="id">D2</span>沉默偏差</span>
+                    <span class="vuln-chip"><span class="id">D3</span>冷启动悖论</span>
+                </div>
+            </div>
+            
+            <div class="category-grid">
+                <div class="category-label">🔧 技术实现</div>
+                <div class="category-items">
+                    <span class="vuln-chip"><span class="id">#7</span>双继承困境</span>
+                    <span class="vuln-chip"><span class="id">#9</span>64卦映射简化</span>
+                    <span class="vuln-chip"><span class="id">#10</span>检测层缺失</span>
+                    <span class="vuln-chip"><span class="id">#12</span>S-Graph更新频率</span>
+                </div>
+            </div>
+            
+            <div class="category-grid">
+                <div class="category-label">📐 理论假设</div>
+                <div class="category-items">
+                    <span class="vuln-chip"><span class="id">#13</span>纳什均衡假设</span>
+                </div>
+            </div>
+            
+            <div class="category-grid">
+                <div class="category-label">📜 协议定义</div>
+                <div class="category-items">
+                    <span class="vuln-chip"><span class="id">#11</span>四权力边界模糊</span>
+                </div>
+            </div>
+            
+            <div class="category-grid">
+                <div class="category-label">🏛️ 治理结构</div>
+                <div class="category-items">
+                    <span class="vuln-chip"><span class="id">#14</span>共识可验证性</span>
+                    <span class="vuln-chip"><span class="id">#16</span>仲裁权重过重</span>
+                    <span class="vuln-chip"><span class="id">D1</span>强制力来源</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- B2: 依赖关系 -->
+        <div class="section">
+            <div class="section-title">B2 · 依赖关系图</div>
+            
+            <div class="dep-flow">
+                <div class="phase-title">🔴 必须优先（阻塞其他漏洞）</div>
+                <div class="dep-line">
+                    <span class="node root">#10 检测层缺失</span>
+                    <span class="arrow">→</span>
+                    <span class="node">影响 #7 双继承（无检测则无法发现链条断裂）</span>
+                </div>
+                <div class="dep-line">
+                    <span class="node root">#11 四权力边界模糊</span>
+                    <span class="arrow">→</span>
+                    <span class="node">影响所有依赖四权力的机制（铸/衍/扩/收）</span>
+                </div>
+            </div>
+            
+            <div class="dep-flow">
+                <div class="phase-title">🟡 机制层依赖（解决顺序有先后）</div>
+                <div class="dep-line">
+                    <span class="node">#15/D3 冷启动毕业底线</span>
+                    <span class="arrow">→</span>
+                    <span class="node">#6 档位间隙（毕业标准决定档位过渡设计）</span>
+                </div>
+                <div class="dep-line">
+                    <span class="node">D2 沉默偏差</span>
+                    <span class="arrow">→</span>
+                    <span class="node">#8 后悔期缺失（沉默让后悔期更必要）</span>
+                </div>
+            </div>
+            
+            <div class="dep-flow">
+                <div class="phase-title">🟢 可并行（互不阻塞）</div>
+                <div class="dep-line">
+                    <span class="node">#9 64卦映射</span> · 
+                    <span class="node">#12 S-Graph频率</span> · 
+                    <span class="node">#13 纳什均衡</span> · 
+                    <span class="node">#14 可验证性</span> · 
+                    <span class="node">#16 仲裁权重</span> · 
+                    <span class="node">D1 强制力来源</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- B3: MVP 影响评估 -->
+        <div class="section">
+            <div class="section-title">B3 · MVP 影响评估</div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>漏洞</th>
+                        <th>类型</th>
+                        <th>不管它 MVP 会崩吗？</th>
+                        <th>理由</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="tag tag-p1">P1</span></td>
+                        <td><strong>#6</strong> 档位间隙</td>
+                        <td><span class="tag tag-blocker">阻塞</span></td>
+                        <td class="impact-cell impact-maybe">⚠️ 可能崩</td>
+                        <td>创作者卡在 2 档，生态活跃度骤降，经济模型失效</td>
+                    </tr>
+                    <tr>
+                        <td><span class="tag tag-p1">P1</span></td>
+                        <td><strong>#7</strong> 双继承困境</td>
+                        <td><span class="tag tag-blocker">阻塞</span></td>
+                        <td class="impact-cell impact-maybe">⚠️ 可能崩</td>
+                        <td>原作升级后链条断裂，引用者信任崩塌</td>
+                    </tr>
+                    <tr>
+                        <td><span class="tag tag-p1">P1</span></td>
+                        <td><strong>#10</strong> 检测层缺失</td>
+                        <td><span class="tag tag-blocker">阻塞</span></td>
+                        <td class="impact-cell impact-yes">✅ 会崩</td>
+                        <td>无检测 = 刷量无法发现，经济系统被操控</td>
+                    </tr>
+                    <tr>
+                        <td><span class="tag tag-p1">P1</span></td>
+                        <td><strong>#11</strong> 四权力边界模糊</td>
+                        <td><span class="tag tag-blocker">阻塞</span></td>
+                        <td class="impact-cell impact-maybe">⚠️ 可能崩</td>
+                        <td>递归定义不清导致合约逻辑错误，铸/衍冲突</td>
+                    </tr>
+                    <tr>
+                        <td><span class="tag tag-p1">P1</span></td>
+                        <td><strong>#8</strong> 后悔期缺失</td>
+                        <td><span class="tag tag-experience">体验</span></td>
+                        <td class="impact-cell impact-no">不崩但差</td>
+                        <td>创作者误操作后无法挽回，用户流失</td>
+                    </tr>
+                    <tr>
+                        <td><span class="tag tag-p1">P1</span></td>
+                        <td><strong>#15/D3</strong> 冷启动毕业底线</td>
+                        <td><span class="tag tag-experience">体验</span></td>
+                        <td class="impact-cell impact-no">不崩但差</td>
+                        <td>冷启动资产长期无曝光，创作者放弃平台</td>
+                    </tr>
+                    <tr>
+                        <td><span class="tag tag-p1">P1</span></td>
+                        <td><strong>#12</strong> S-Graph更新频率</td>
+                        <td><span class="tag tag-experience">体验</span></td>
+                        <td class="impact-cell impact-no">不崩但慢</td>
+                        <td>每次事件更新势位，性能瓶颈，但不影响正确性</td>
+                    </tr>
+                    <tr>
+                        <td><span class="tag tag-p1">P1</span></td>
+                        <td><strong>#9</strong> 64卦映射简化</td>
+                        <td><span class="tag tag-theory">理论</span></td>
+                        <td class="impact-cell impact-no">不崩</td>
+                        <td>简化映射够用，优化是锦上添花</td>
+                    </tr>
+                    <tr>
+                        <td><span class="tag tag-p1">P1</span></td>
+                        <td><strong>#13</strong> 纳什均衡假设</td>
+                        <td><span class="tag tag-theory">理论</span></td>
+                        <td class="impact-cell impact-no">不崩</td>
+                        <td>理论假设不影响代码运行，可后续修正</td>
+                    </tr>
+                    <tr>
+                        <td><span class="tag tag-p1">P1</span></td>
+                        <td><strong>#14</strong> 共识可验证性</td>
+                        <td><span class="tag tag-theory">理论</span></td>
+                        <td class="impact-cell impact-no">不崩</td>
+                        <td>MVP 用简化社区裁决，密码学增强后续做</td>
+                    </tr>
+                    <tr>
+                        <td><span class="tag tag-p1">P1</span></td>
+                        <td><strong>#16</strong> 仲裁权重过重</td>
+                        <td><span class="tag tag-theory">理论</span></td>
+                        <td class="impact-cell impact-no">不崩</td>
+                        <td>当前架构能跑，调整是优化而非修复</td>
+                    </tr>
+                    <tr>
+                        <td><span class="tag tag-p2">P2</span></td>
+                        <td><strong>D1-D3</strong> 深化问题</td>
+                        <td><span class="tag tag-theory">理论</span></td>
+                        <td class="impact-cell impact-no">不崩</td>
+                        <td>已在 v0.4 仲裁模块中部分解决</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 执行建议 -->
+        <div class="section">
+            <div class="section-title">执行建议 · Phase 排序</div>
+            
+            <div class="phase-card phase-1">
+                <div class="phase-title">
+                    <span class="phase-badge" style="background:var(--phase1);color:var(--vermilion);">Phase 1 · MVP</span>
+                    必须进 MVP（4个阻塞级漏洞）
+                </div>
+                <p style="font-size:0.85rem;color:var(--ink-light);margin-bottom:12px;">
+                    这些漏洞如果不解决，MVP 上线后可能直接崩掉或经济模型失效。
+                </p>
+                <table>
+                    <thead>
+                        <tr><th>#</th><th>漏洞</th><th>最小可行修复</th><th>预估工期</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>#10</strong></td>
+                            <td>检测层缺失</td>
+                            <td>引入统计异常检测 + 同批账户关联检测（简化版）</td>
+                            <td>3天</td>
+                        </tr>
+                        <tr>
+                            <td><strong>#11</strong></td>
+                            <td>四权力边界模糊</td>
+                            <td>明确铸→衍→扩的递归终止条件（3层上限）</td>
+                            <td>2天</td>
+                        </tr>
+                        <tr>
+                            <td><strong>#6</strong></td>
+                            <td>档位间隙</td>
+                            <td>2→3 之间加"准契约"过渡档（软收费权）</td>
+                            <td>2天</td>
+                        </tr>
+                        <tr>
+                            <td><strong>#7</strong></td>
+                            <td>双继承困境</td>
+                            <td>原作升级时自动推送更新到所有引用者（通知机制）</td>
+                            <td>3天</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p style="font-size:0.8rem;color:var(--ink-light);margin-top:8px;">
+                    合计：<strong>10天</strong>，可与模拟器连接并行。
+                </p>
+            </div>
+            
+            <div class="phase-card phase-2">
+                <div class="phase-title">
+                    <span class="phase-badge" style="background:var(--phase2);color:#8a6d1a;">Phase 2 · 体验</span>
+                    应该进 MVP（3个体验级漏洞）
+                </div>
+                <p style="font-size:0.85rem;color:var(--ink-light);margin-bottom:12px;">
+                    不崩，但体验差，可能导致创作者流失。
+                </p>
+                <table>
+                    <thead>
+                        <tr><th>#</th><th>漏洞</th><th>最小可行修复</th><th>预估工期</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>#8</strong></td>
+                            <td>后悔期缺失</td>
+                            <td>配置变更后 72h 冷却期 = 后悔窗口，可一键撤销</td>
+                            <td>1天</td>
+                        </tr>
+                        <tr>
+                            <td><strong>#15/D3</strong></td>
+                            <td>冷启动毕业底线</td>
+                            <td>混合阈值（绝对3引用 + 时间60天兜底）</td>
+                            <td>2天</td>
+                        </tr>
+                        <tr>
+                            <td><strong>#12</strong></td>
+                            <td>S-Graph更新频率</td>
+                            <td>势位评估改为每日批量更新（非每事件）</td>
+                            <td>1天</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p style="font-size:0.8rem;color:var(--ink-light);margin-top:8px;">
+                    合计：<strong>4天</strong>，Phase 1 完成后穿插进行。
+                </p>
+            </div>
+            
+            <div class="phase-card phase-3">
+                <div class="phase-title">
+                    <span class="phase-badge" style="background:var(--phase3);color:var(--ink-medium);">Phase 3 · 增强</span>
+                    可以延后（6个理论/优化级漏洞）
+                </div>
+                <p style="font-size:0.85rem;color:var(--ink-light);margin-bottom:12px;">
+                    不影响 MVP 运行，后续版本逐步优化。
+                </p>
+                <table>
+                    <thead>
+                        <tr><th>#</th><th>漏洞</th><th>延后理由</th><th>未来修复窗口</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><strong>#9</strong></td><td>64卦映射简化</td><td>6档势位够用，64卦是哲学表达层</td><td>v1.0 势图升级</td></tr>
+                        <tr><td><strong>#13</strong></td><td>纳什均衡假设</td><td>理论假设，代码运行不依赖</td><td>v1.0 行为模型升级</td></tr>
+                        <tr><td><strong>#14</strong></td><td>共识可验证性</td><td>MVP 用简化社区裁决</td><td>v1.0 引入 ZK 证明</td></tr>
+                        <tr><td><strong>#16</strong></td><td>仲裁权重过重</td><td>架构能跑，调整是优化</td><td>v0.5 架构调整</td></tr>
+                        <tr><td><strong>D1</strong></td><td>强制力来源</td><td>已在 v0.4 中三层裁决解决</td><td>v1.0 治理深化</td></tr>
+                        <tr><td><strong>D2-D3</strong></td><td>沉默偏差/悖论</td><td>已在 v0.4 中加权共识解决</td><td>v1.0 共识机制升级</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 附录：完整清单 -->
+        <div class="section">
+            <div class="section-title">附录 · 完整漏洞清单（v0.1 → v0.2）</div>
+            
+            <div class="note">
+                P0 漏洞（5个）已在仲裁模块 v0.4 / P0 v1.1 防护方案中解决，此处不再重复。
+                以下为未解决的 P1/P2 漏洞 + 深化问题。
+            </div>
+            
+            <table>
+                <thead>
+                    <tr><th>#</th><th>来源</th><th>核心问题</th><th>层级</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><span class="tag tag-p1">P1</span> 6</td><td>Talus / 雨娃</td><td>档位间隙（2→3跳跃过大）</td><td>机制设计</td></tr>
+                    <tr><td><span class="tag tag-p1">P1</span> 7</td><td>Talus</td><td>双继承困境</td><td>技术实现</td></tr>
+                    <tr><td><span class="tag tag-p1">P1</span> 8</td><td>Cat.Black</td><td>后悔期缺失</td><td>机制设计</td></tr>
+                    <tr><td><span class="tag tag-p1">P1</span> 9</td><td>Cat.Black</td><td>64卦映射过度简化</td><td>技术实现</td></tr>
+                    <tr><td><span class="tag tag-p1">P1</span> 10</td><td>Cat.Black / Talus</td><td>检测层缺失（架构级漏洞）</td><td>技术实现</td></tr>
+                    <tr><td><span class="tag tag-p1">P1</span> 11</td><td>Talus</td><td>四权力边界模糊（铸 vs 衍递归）</td><td>协议定义</td></tr>
+                    <tr><td><span class="tag tag-p1">P1</span> 12</td><td>Talus</td><td>S-Graph 动态更新频率</td><td>技术实现</td></tr>
+                    <tr><td><span class="tag tag-p1">P1</span> 13</td><td>Talus</td><td>经济模型纳什均衡假设</td><td>理论假设</td></tr>
+                    <tr><td><span class="tag tag-p1">P1</span> 14</td><td>Talus</td><td>共识机制可验证性</td><td>治理结构</td></tr>
+                    <tr><td><span class="tag tag-p1">P1</span> 15</td><td>Talus 深化</td><td>冷启动毕业底线</td><td>机制设计</td></tr>
+                    <tr><td><span class="tag tag-p1">P1</span> 16</td><td>雨娃</td><td>仲裁模块权重是否过重</td><td>治理结构</td></tr>
+                    <tr><td><span class="tag tag-p2">P2</span> D1</td><td>Talus 深化</td><td>异议裁决的强制力从哪来？</td><td>治理结构</td></tr>
+                    <tr><td><span class="tag tag-p2">P2</span> D2</td><td>Talus 深化</td><td>冷却期内的沉默算不算同意？</td><td>机制设计</td></tr>
+                    <tr><td><span class="tag tag-p2">P2</span> D3</td><td>Talus 深化</td><td>冷启动悖论的毕业底线</td><td>机制设计</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="footer">
+            <p>ECHO Protocol · 万物有灵，皆可生长</p>
+            <p style="margin-top:8px;font-size:0.75rem;">分析：雨娃（Yuwa）· 2026-05-18 · 基于四 Agent 协作产出 v0.1 独立分析</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECHO 多 Agent 协作空间规划 v1.0</title>
+<style>
+  :root {
+    --jade: #4A7C6F;
+    --light-jade: #E8F4F0;
+    --mist: #F5F5F3;
+    --ink: #2D3748;
+    --soft-gray: #718096;
+    --warm-gray: #A0AEC0;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: var(--mist);
+    color: var(--ink);
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    line-height: 1.8;
+  }
+  h1 { color: var(--jade); border-bottom: 2px solid var(--jade); padding-bottom: 12px; margin-bottom: 30px; }
+  h2 { color: var(--jade); margin-top: 40px; margin-bottom: 20px; font-weight: 600; }
+  h3 { color: var(--soft-gray); margin-top: 30px; margin-bottom: 15px; }
+  .meta { color: var(--warm-gray); font-size: 14px; margin-bottom: 30px; }
+  .card { background: white; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+  .agent-card { border-left: 4px solid var(--jade); padding-left: 16px; margin: 16px 0; }
+  .agent-name { color: var(--jade); font-weight: 600; font-size: 18px; }
+  .role-tag { display: inline-block; background: var(--light-jade); color: var(--jade); padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-left: 8px; }
+  .status-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-left: 8px; }
+  .status-active { background: #C6F6D5; color: #22543D; }
+  .status-planned { background: #FEEBC8; color: #744210; }
+  .status-pending { background: #E2E8F0; color: #4A5568; }
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+  th { background: var(--light-jade); color: var(--jade); padding: 12px; text-align: left; font-weight: 600; }
+  td { padding: 12px; border-bottom: 1px solid #E2E8F0; }
+  .highlight { background: #FFFAF0; padding: 16px; border-radius: 8px; border-left: 4px solid #ED8936; margin: 16px 0; }
+  .protocol-box { background: #F7FAFC; padding: 20px; border-radius: 8px; border: 1px solid #E2E8F0; margin: 16px 0; }
+  .flow-step { display: flex; align-items: center; margin: 12px 0; }
+  .flow-arrow { color: var(--warm-gray); margin: 0 12px; }
+  code { background: #EDF2F7; padding: 2px 6px; border-radius: 4px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<h1>ECHO 多 Agent 协作空间规划 v1.0</h1>
+
+<div class="meta">
+  起草：雨娃 · 审阅：Seaman · 日期：2026-05-15<br>
+  状态：草案，待 Seaman 确认后推进
+</div>
+
+<div class="card">
+  <h2>🎯 背景与目标</h2>
+  <p>随着 ECHO 项目推进，多个 Agent（雨娃、Talus、雅怡 Agent、77 Agent 等）需要在一个统一的协作空间内高效工作。今天的实践暴露了通信、触发、身份等基础设施问题，本规划旨在建立清晰的协作框架。</p>
+  
+  <p><strong>核心目标：</strong></p>
+  <ol>
+    <li><strong>消除传话成本</strong>——Agent 之间能直接通信，不需要 Founder 当中介</li>
+    <li><strong>明确决策权</strong>——每个产出由对应的人类决策者确认，Agent 不越权</li>
+    <li><strong>版本可控</strong>——多 Agent 产出的文档有清晰的版本管理和汇总机制</li>
+    <li><strong>可扩展</strong>——新 Agent 加入时能快速融入，不需要重新磨合</li>
+  </ol>
+</div>
+
+<h2>👥 Agent 角色定义</h2>
+
+<div class="card">
+  <div class="agent-card">
+    <span class="agent-name">雨娃 <span class="role-tag">ECHO 协调 Agent</span></span>
+    <span class="status-badge status-active">已激活</span>
+    <p><strong>负责：</strong></p>
+    <ul>
+      <li>ECHO 文档整理、版本管理、部署</li>
+      <li>团队信息同步（会议纪要、待办）</li>
+      <li>技术调研（协议设计、模拟器架构）</li>
+      <li>跨 Agent 沟通协调</li>
+    </ul>
+    <p><strong>人类决策者：</strong>雅婷（Founder）</p>
+    <p><strong>当前限制：</strong>飞书通信身份为应用，无法触发 Talus 响应，需要人类手动激活</p>
+  </div>
+
+  <div class="agent-card">
+    <span class="agent-name">Talus <span class="role-tag">协议深度分析 Agent</span></span>
+    <span class="status-badge status-active">已激活</span>
+    <p><strong>负责：</strong></p>
+    <ul>
+      <li>协议漏洞发现与修正建议</li>
+      <li>机制设计深度追问（如 λ 衰减、人格模型）</li>
+      <li>与其他 Agent 的技术辩论</li>
+    </ul>
+    <p><strong>人类决策者：</strong>听风 / Lucifer</p>
+    <p><strong>当前限制：</strong>需要 Lucifer 激活才能参与，不会自动响应群消息</p>
+  </div>
+
+  <div class="agent-card">
+    <span class="agent-name">Seaman Agent <span class="role-tag">协议架构决策 Agent</span></span>
+    <span class="status-badge status-active">已激活</span>
+    <p><strong>负责：</strong></p>
+    <ul>
+      <li>协议架构方向最终把控</li>
+      <li>技术方案审阅与决策</li>
+      <li>模拟器架构设计</li>
+      <li>对 Talus/雨娃 提案进行评判与确认</li>
+    </ul>
+    <p><strong>人类决策者：</strong>Seaman（核心决策者）</p>
+    <p><strong>协作模式：</strong>接收 Agent 提案 → 人类 Seaman 最终确认 → 反馈执行</p>
+  </div>
+
+  <div class="agent-card">
+    <span class="agent-name">雅怡 Agent <span class="role-tag">产品设计 Agent</span></span>
+    <span class="status-badge status-planned">待加入</span>
+    <p><strong>负责：</strong></p>
+    <ul>
+      <li>产品需求梳理</li>
+      <li>用户体验视角的协议评审</li>
+      <li>模拟器教育演示层设计</li>
+    </ul>
+    <p><strong>人类决策者：</strong>雅怡</p>
+  </div>
+
+  <div class="agent-card">
+    <span class="agent-name">77 Agent <span class="role-tag">运营/测试 Agent</span></span>
+    <span class="status-badge status-planned">待加入</span>
+    <p><strong>负责：</strong></p>
+    <ul>
+      <li>模拟器测试执行</li>
+      <li>数据收集与初步分析</li>
+      <li>协助 Agent 模拟用户研究</li>
+    </ul>
+    <p><strong>人类决策者：</strong>77 / 琪琪</p>
+  </div>
+</div>
+
+<h2>📡 通信协议</h2>
+
+<div class="card">
+  <h3>当前通信方式对比</h3>
+  <table>
+    <tr>
+      <th>方式</th>
+      <th>适用场景</th>
+      <th>优点</th>
+      <th>缺点</th>
+    </tr>
+    <tr>
+      <td>飞书群聊（人类 @）</td>
+      <td>激活 Agent、重大决策</td>
+      <td>能触发 Talus 响应</td>
+      <td>需要人类手动操作</td>
+    </tr>
+    <tr>
+      <td>飞书群聊（Agent 直接发）</td>
+      <td>日常交流、文档同步</td>
+      <td>无需人类参与</td>
+      <td>@ 为灰色，不会触发 Talus 通知</td>
+    </tr>
+    <tr>
+      <td>飞书私聊</td>
+      <td>一对一确认、敏感讨论</td>
+      <td>直接送达</td>
+      <td>其他 Agent 不可见</td>
+    </tr>
+    <tr>
+      <td>文档链接</td>
+      <td>复杂内容、需要 review</td>
+      <td>异步、可沉淀</td>
+      <td>实时性差</td>
+    </tr>
+  </table>
+
+  <div class="highlight">
+    <strong>⚠️ 关键发现（今日实践）：</strong><br>
+    雨娃用 <code>feishu_im_user_message</code> 发群消息，显示身份为"雨娃-ECHO"应用，不是 zhouyating 个人。因此：
+    <ul>
+      <li>雨娃发的 @Talus 是灰色，不会触发 Talus 响应</li>
+      <li>只有 zhouyating 手动 @Talus，Talus 才会被激活参与</li>
+      <li>激活后两个 Agent 可以在群里自主交流，但触发权在人类</li>
+    </ul>
+  </div>
+
+  <h3>建议的通信规范</h3>
+  <div class="protocol-box">
+    <p><strong>场景 A：启动 Agent 间讨论</strong></p>
+    <p>1. Founder 在群里发："@Talus @雨娃-ECHO 请讨论 XXX 问题"</p>
+    <p>2. Talus 被激活，雨娃看到后开始交流</p>
+    <p>3. 讨论中 Agent 自主交流，不需要人类参与</p>
+    <p>4. 产出文档后，@ 对应的人类决策者确认</p>
+  </div>
+
+  <div class="protocol-box">
+    <p><strong>场景 B：日常文档同步</strong></p>
+    <p>1. Agent 直接发群消息（post 格式），附文档链接</p>
+    <p>2. 不需要 @ 任何人，其他 Agent 定期查看记录</p>
+    <p>3. 需要反馈时，再请求人类激活对方</p>
+  </div>
+
+  <div class="protocol-box">
+    <p><strong>场景 C：紧急沟通</strong></p>
+    <p>1. 通过人类决策者私聊转达</p>
+    <p>2. 或直接电话联系（最高优先级）</p>
+  </div>
+</div>
+
+<h2>🔄 协作流程</h2>
+
+<div class="card">
+  <h3>标准协作流程</h3>
+  
+  <div class="flow-step">
+    <span style="background: var(--jade); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px;">需求提出</span>
+    <span class="flow-arrow">→</span>
+    <span style="background: #EDF2F7; padding: 8px 16px; border-radius: 20px; font-size: 14px;">人类或 Agent 提出需求</span>
+  </div>
+  
+  <div class="flow-step">
+    <span style="background: var(--jade); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px;">分工决策</span>
+    <span class="flow-arrow">→</span>
+    <span style="background: #EDF2F7; padding: 8px 16px; border-radius: 20px; font-size: 14px;">Founder/Seaman 指定负责 Agent</span>
+  </div>
+  
+  <div class="flow-step">
+    <span style="background: var(--jade); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px;">执行</span>
+    <span class="flow-arrow">→</span>
+    <span style="background: #EDF2F7; padding: 8px 16px; border-radius: 20px; font-size: 14px;">Agent 独立或协作完成</span>
+  </div>
+  
+  <div class="flow-step">
+    <span style="background: var(--jade); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px;">产出</span>
+    <span class="flow-arrow">→</span>
+    <span style="background: #EDF2F7; padding: 8px 16px; border-radius: 20px; font-size: 14px;">文档部署、链接同步</span>
+  </div>
+  
+  <div class="flow-step">
+    <span style="background: var(--jade); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px;">审阅</span>
+    <span class="flow-arrow">→</span>
+    <span style="background: #EDF2F7; padding: 8px 16px; border-radius: 20px; font-size: 14px;">对应人类决策者确认</span>
+  </div>
+  
+  <div class="flow-step">
+    <span style="background: var(--jade); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px;">合并</span>
+    <span class="flow-arrow">→</span>
+    <span style="background: #EDF2F7; padding: 8px 16px; border-radius: 20px; font-size: 14px;">雨娃汇总到主文档</span>
+  </div>
+
+  <h3>决策权矩阵</h3>
+  <table>
+    <tr>
+      <th>决策内容</th>
+      <th>决策者</th>
+      <th>Agent 角色</th>
+    </tr>
+    <tr>
+      <td>协议架构方向</td>
+      <td>Seaman / 雅婷</td>
+      <td>Talus/雨娃 提议，Seaman 最终决策</td>
+    </tr>
+    <tr>
+      <td>产品功能优先级</td>
+      <td>雅怡 / 雅婷</td>
+      <td>Agent 执行，产品确认</td>
+    </tr>
+    <tr>
+      <td>模拟器技术实现</td>
+      <td>Seaman / Jason</td>
+      <td>Agent 调研，技术决策</td>
+    </tr>
+    <tr>
+      <td>文档内容准确性</td>
+      <td>对应领域负责人</td>
+      <td>Agent 起草，专家审阅</td>
+    </tr>
+    <tr>
+      <td>部署与版本管理</td>
+      <td>雨娃（执行层面）</td>
+      <td>雨娃自主执行，异常情况上报</td>
+    </tr>
+  </table>
+</div>
+
+<h2>📁 文档管理</h2>
+
+<div class="card">
+  <h3>文档分级</h3>
+  <table>
+    <tr>
+      <th>级别</th>
+      <th>示例</th>
+      <th>管理责任</th>
+      <th>审阅要求</th>
+    </tr>
+    <tr>
+      <td><strong>P0 - 核心协议</strong></td>
+      <td>元规则协议 v3、权属蓝图、多Agent协作规划</td>
+      <td>Seaman 最终确认</td>
+      <td>必须人工审阅</td>
+    </tr>
+    <tr>
+      <td><strong>P1 - 技术设计</strong></td>
+      <td>ShiGraph 技术设计、模拟器架构</td>
+      <td>Seaman/Jason 确认</td>
+      <td>Agent 提议，人工确认</td>
+    </tr>
+    <tr>
+      <td><strong>P2 - 调研产出</strong></td>
+      <td>Talus 反馈摘要、Agent 模拟报告</td>
+      <td>雨娃汇总</td>
+      <td>异步 review</td>
+    </tr>
+    <tr>
+      <td><strong>P3 - 过程记录</strong></td>
+      <td>会议纪要、todo 列表</td>
+      <td>雨娃自主管理</td>
+      <td>定期同步即可</td>
+    </tr>
+  </table>
+
+  <h3>版本命名规范</h3>
+  <p><code>[文档名]-v[主版本].[次版本]-[状态]</code></p>
+  <ul>
+    <li>主版本：重大结构变更（如 v2→v3）</li>
+    <li>次版本：内容更新（如 v3.0→v3.1）</li>
+    <li>状态：draft / review / final / deprecated</li>
+  </ul>
+  <p>示例：<code>echo-meta-rules-v3.1-draft.html</code></p>
+
+  <h3>部署地址规范</h3>
+  <ul>
+    <li>主版本：<code>https://[branch].echo-v2.pages.dev/[path]</code></li>
+    <li>review 版本：<code>https://[branch]-review.echo-v2.pages.dev/[path]</code></li>
+    <li>临时版本：<code>https://[branch]-temp.echo-v2.pages.dev/[path]</code></li>
+  </ul>
+</div>
+
+<h2>🚀 下一步行动</h2>
+
+<div class="card">
+  <p><strong>Seaman 确认后执行：</strong></p>
+  <ol>
+    <li>将本文档部署为可访问页面</li>
+    <li>与 Lucifer 沟通，请其调整 Talus 配置（自动监听群消息或增加触发关键词）</li>
+    <li>创建"Agent 协作空间"飞书话题/子群，专门用于 Agent 间讨论</li>
+    <li>建立 Agent 每日/每周自动同步机制（cron 任务）</li>
+    <li>准备雅怡 Agent、77 Agent 的 onboarding 文档</li>
+  </ol>
+
+  <div class="highlight">
+    <strong>需要 Seaman 决策的问题：</strong>
+    <ol>
+      <li>本规划的整体方向是否认可？</li>
+      <li>Agent 角色定义是否合理？有没有遗漏的角色？</li>
+      <li>决策权矩阵是否准确？特别是协议架构方向</li>
+      <li>是否同意推进与 Lucifer 的通信机制优化？</li>
+    </ol>
+  </div>
+</div>
+
+<div class="card" style="text-align: center; margin-top: 40px; color: var(--warm-gray);">
+  <p>— 雨娃起草 · 2026-05-15 —</p>
+  <p style="font-size: 14px;">ECHO 多 Agent 协作空间规划 v1.0 · 草案</p>
+</div>
+
+</body>
+</html>

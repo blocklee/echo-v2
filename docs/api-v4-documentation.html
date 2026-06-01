@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECHO 模拟器 API v4.0 — 接口文档</title>
+<style>
+:root{--paper:#f5f3ef;--ink-dark:#2c3e3a;--ink-medium:#4A7C6F;--ink-light:#7a8b82;--vermilion:#c44536;--gold:#c4a35a;--border:#e5e1da;}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:"Noto Serif SC",Georgia,serif;background:var(--paper);color:var(--ink-dark);line-height:1.8;max-width:900px;margin:0 auto;padding:40px 20px}
+h1{font-size:28px;color:var(--ink-dark);margin-bottom:8px}h2{font-size:20px;color:var(--ink-medium);margin:32px 0 16px;padding-bottom:8px;border-bottom:1px solid var(--border)}h3{font-size:16px;color:var(--vermilion);margin:20px 0 8px}
+.subtitle{color:var(--ink-light);font-size:14px;margin-bottom:24px}.badge{display:inline-block;background:var(--ink-medium);color:#fff;padding:2px 8px;border-radius:4px;font-size:12px;margin-left:8px}
+.endpoint{margin:16px 0;padding:16px;background:#fff;border-radius:8px;border-left:4px solid var(--gold);box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.method{display:inline-block;padding:2px 10px;border-radius:4px;font-size:13px;font-weight:bold;margin-right:8px}
+.get{background:#e8f5e9;color:#2e7d32}.post{background:#fff3e0;color:#ef6c00}
+.url{font-family:monospace;font-size:14px;color:var(--ink-dark);background:#f5f5f5;padding:4px 8px;border-radius:4px}
+.section{margin:12px 0;padding:12px;background:#faf9f7;border-radius:6px}
+.section-title{font-size:13px;color:var(--ink-light);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+pre{background:#2c3e3a;color:#f5f3ef;padding:12px;border-radius:6px;overflow-x:auto;font-size:13px;line-height:1.6}
+.note{background:#fff8e1;padding:10px 14px;border-radius:6px;font-size:13px;color:#8d6e1f;margin:12px 0}
+.footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--border);font-size:13px;color:var(--ink-light);text-align:center}
+ul{margin:8px 0 8px 24px}li{margin:4px 0}
+</style>
+</head>
+<body>
+
+<h1>🧪 ECHO 模拟器 API v4.0</h1>
+<div class="subtitle">Production-Grade Mesa 引擎 · 统计检验 · 完整实验数据</div>
+
+<h2>📋 快速开始</h2>
+<div class="note">
+<strong>后端运行地址：</strong><code>http://localhost:8000</code><br>
+<strong>API 文档：</strong><code>http://localhost:8000/docs</code>（Swagger UI）<br>
+<strong>OpenAPI：</strong><code>http://localhost:8000/openapi.json</code>
+</div>
+
+<h3>本地启动步骤</h3>
+<div class="section">
+<div class="section-title">Terminal / 命令行</div>
+<pre>cd echo-v2/simulation
+
+# 安装依赖（首次）
+pip install fastapi uvicorn mesa networkx pydantic scipy
+
+# 启动后端
+python3 echo_simulator_api_v2.py
+
+# 测试
+http://localhost:8000/health</pre>
+</div>
+
+<h3>核心文件清单</h3>
+<ul>
+<li><strong>echo_simulation_mesa_v2.py</strong> — Mesa 引擎 v4.0（自定义创作者/用户/环境 + S-Graph + 统计检验）</li>
+<li><strong>echo_simulator_api_v2.py</strong> — FastAPI 后端（6个端点 + OpenAPI 文档）</li>
+<li><strong>echo_contract_mock.py</strong> — 合约逻辑模拟</li>
+</ul>
+
+<h2>🔌 API 端点</h2>
+
+<div class="endpoint">
+<span class="method get">GET</span><span class="url">/health</span>
+<p>健康检查，返回服务状态和引擎版本</p>
+<div class="section">
+<div class="section-title">响应示例</div>
+<pre>{
+  "status": "ok",
+  "version": "4.0.0",
+  "engine": "Mesa v4.0",
+  "capabilities": ["single_run", "tournament", "ab_test", "robustness"]
+}</pre>
+</div>
+</div>
+
+<div class="endpoint">
+<span class="method get">GET</span><span class="url">/config</span>
+<p>获取默认配置：创作者类型、用户角色、四权力定义、环境参数</p>
+</div>
+
+<div class="endpoint">
+<span class="method post">POST</span><span class="url">/run</span><span class="badge">核心</span>
+<p>运行单次模拟实验，返回完整时序数据、资产生命周期、S-Graph</p>
+<div class="section">
+<div class="section-title">请求体</div>
+<pre>{
+  "simulation_config": {
+    "duration_days": 30,
+    "num_creators": 6,
+    "num_users": 20,
+    "seed": 42
+  },
+  "creators": [
+    {
+      "id": "creator_1",
+      "name": "林水墨",
+      "type": "保守型",
+      "asset_config": {
+        "铸": {"enabled": true, "price": 100},
+        "衍": {"enabled": true, "max_derivatives": 3, "fee_percent": 15},
+        "扩": {"enabled": true, "platforms": ["web", "app"]},
+        "收": {"enabled": true, "revenue_share": 70}
+      },
+      "initial_work": {
+        "title": "《晨曦》",
+        "category": "视觉艺术",
+        "quality_score": 8.5
+      }
+    }
+  ],
+  "users": [
+    {
+      "id": "user_1",
+      "name": "用户1",
+      "role": "浏览者",
+      "preferences": {"explore_prob": 0.7},
+      "personality": {"optimism": 0.6, "risk_tolerance": 0.5, "social_drive": 0.4},
+      "initial_wallet": 10.0
+    }
+  ],
+  "environment_params": {
+    "platform_fee_percent": 5,
+    "discovery_algorithm": "trending",
+    "market_growth_rate": 0.02
+  }
+}</pre>
+</div>
+<div class="section">
+<div class="section-title">响应字段</div>
+<ul>
+<li><code>run_id</code> — 唯一实验 ID</li>
+<li><code>summary</code> — 汇总指标（总事件/上链事件/总收入/满意度/生态健康度）</li>
+<li><code>timeseries</code> — 每天时序数据（活跃用户数/事件数/收入/新增资产/争议/满意度）</li>
+<li><code>creator_results</code> — 每个创作者的完整结果（收入/满意度/资产数/引用/改编/势位变化/配置历史）</li>
+<li><code>asset_lifecycle</code> — 每个资产的完整轨迹（创建日/势位时间线/总收入/最终状态）</li>
+<li><code>user_states</code> — 每个用户最终状态（角色/情绪/钱包/交互次数/人格）</li>
+<li><code>s_graph_data</code> — S-Graph 图结构（节点/边/张量/网络统计）</li>
+<li><code>snapshots</code> — 每日快照（完整生态状态）</li>
+<li><code>events</code> — 所有事件日志</li>
+</ul>
+</div>
+</div>
+
+<div class="endpoint">
+<span class="method post">POST</span><span class="url">/run/tournament</span><span class="badge">统计检验</span>
+<p>配置策略锦标赛，对比多种策略，含 t-test/p值/置信区间/Cohen's d</p>
+<div class="section">
+<div class="section-title">请求体</div>
+<pre>{
+  "simulation_config": {"duration_days": 30, "num_creators": 6, "num_users": 20},
+  "strategies": ["保守型", "开放型", "平衡型", "策略型"],
+  "metrics": ["revenue", "satisfaction", "ecosystem_health", "asset_growth"],
+  "n_rounds": 10
+}</pre>
+</div>
+<div class="section">
+<div class="section-title">统计输出</div>
+<pre>{
+  "statistical_significance": {
+    "保守型_vs_开放型": {
+      "t_statistic": 2.3456,
+      "p_value": 0.034521,
+      "significant": true,
+      "effect_size": 0.67,
+      "effect_interpretation": "中效应",
+      "echo_group_ci": {"mean": 234.50, "lower": 198.32, "upper": 270.68, "confidence": 0.95}
+    }
+  }
+}</pre>
+</div>
+</div>
+
+<div class="endpoint">
+<span class="method post">POST</span><span class="url">/run/ab</span><span class="badge">统计检验</span>
+<p>A/B 对照实验：ECHO 生态 vs 传统平台，完整假设检验</p>
+<div class="section">
+<div class="section-title">统计输出</div>
+<ul>
+<li><code>hypothesis_test_revenue</code> — 收入差异的 t-test（含 effect size + 置信区间）</li>
+<li><code>hypothesis_test_satisfaction</code> — 满意度差异的 t-test</li>
+</ul>
+</div>
+</div>
+
+<div class="endpoint">
+<span class="method post">POST</span><span class="url">/run/robustness</span><span class="badge">新增</span>
+<p>鲁棒性测试：单参数敏感性分析</p>
+<div class="section">
+<div class="section-title">请求体</div>
+<pre>{
+  "simulation_config": {"duration_days": 30, "num_creators": 6, "num_users": 20},
+  "parameter": "platform_fee_percent",
+  "range": [0, 5, 10, 20, 30],
+  "n_runs_per_value": 10
+}</pre>
+</div>
+</div>
+
+<h2>📊 数据模型</h2>
+
+<h3>四权力配置</h3>
+<table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:14px">
+<tr style="background:var(--ink-medium);color:#fff"><th style="padding:8px;text-align:left">权力</th><th style="padding:8px;text-align:left">配置项</th><th style="padding:8px;text-align:left">类型</th></tr>
+<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px"><strong>铸</strong></td><td style="padding:8px">enabled, price, max_supply</td><td style="padding:8px">bool, float, int</td></tr>
+<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px"><strong>衍</strong></td><td style="padding:8px">enabled, max_derivatives, fee_percent, approval_required</td><td style="padding:8px">bool, int, float, bool</td></tr>
+<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px"><strong>扩</strong></td><td style="padding:8px">enabled, platforms, regions, max_channels</td><td style="padding:8px">bool, list, list, int</td></tr>
+<tr><td style="padding:8px"><strong>收</strong></td><td style="padding:8px">enabled, revenue_share, auto_distribute, min_payout</td><td style="padding:8px">bool, float, bool, float</td></tr>
+</table>
+
+<h3>用户角色</h3>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0">
+<div class="section"><strong>浏览者</strong><br><span style="font-size:12px;color:var(--ink-light)">browse</span></div>
+<div class="section"><strong>引用者</strong><br><span style="font-size:12px;color:var(--ink-light)">browse + cite</span></div>
+<div class="section"><strong>改编者</strong><br><span style="font-size:12px;color:var(--ink-light)">browse + request_remix</span></div>
+<div class="section"><strong>传播者</strong><br><span style="font-size:12px;color:var(--ink-light)">browse + spread</span></div>
+<div class="section"><strong>付费者</strong><br><span style="font-size:12px;color:var(--ink-light)">browse + pay</span></div>
+<div class="section"><strong>争议者</strong><br><span style="font-size:12px;color:var(--ink-light)">browse + dispute</span></div>
+</div>
+
+<h2>🔬 统计检验说明</h2>
+<div class="note">
+<strong>Welch's t-test</strong>（独立样本，不等方差）<br>
+<strong>Cohen's d</strong> 效应量解释：
+<ul>
+<li>&lt; 0.2 — 可忽略</li>
+<li>0.2 ~ 0.5 — 小效应</li>
+<li>0.5 ~ 0.8 — 中效应</li>
+<li>&gt; 0.8 — 大效应</li>
+</ul>
+<strong>95% 置信区间</strong>基于 t 分布计算
+</div>
+
+<h2>🚀 部署相关</h2>
+
+<div class="section">
+<div class="section-title">Standalone 前端演示（无需后端）</div>
+<p>小伙伴没有 Python 环境？直接用演示版：</p>
+<p><a href="https://agent-value.echo-v2.pages.dev/simulator-standalone.html" style="color:var(--ink-medium)">https://agent-value.echo-v2.pages.dev/simulator-standalone.html</a></p>
+<p style="font-size:13px;color:var(--ink-light)">浏览器打开就能用，内嵌 JS 引擎，不需要后端</p>
+</div>
+
+<div class="section">
+<div class="section-title">后端 + 前端（完整版）</div>
+<p>需要真实实验数据？启动后端后，Standalone 页面会自动连接：</p>
+<pre># 1. 启动后端
+python3 echo_simulator_api_v2.py
+
+# 2. 打开前端（改 API_BASE 为 localhost）
+# 或者直接访问后端 Swagger UI
+http://localhost:8000/docs</pre>
+</div>
+
+<div class="footer">
+<p>🌱 ECHO Protocol · 万物有灵，皆可生长</p>
+<p>Generated: 2026-05-18 12:45 CST · Engine: Mesa v4.0 + scipy</p>
+</div>
+
+</body>
+</html>

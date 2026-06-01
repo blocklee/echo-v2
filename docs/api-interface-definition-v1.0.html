@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECHO 模拟器 · 接口定义文档 v1.0</title>
+<style>
+:root {
+  --mist-green: #4A7C6F;
+  --mist-green-light: #5B8A7A;
+  --mist-green-dark: #3D6B5A;
+  --gray-100: #F7F6F4;
+  --gray-200: #E8E6E3;
+  --gray-300: #D1CFC9;
+  --gray-400: #9A9892;
+  --gray-500: #6B6964;
+  --gray-600: #4A4844;
+  --gray-700: #2D2C29;
+  --text-primary: #2D2C29;
+  --text-secondary: #6B6964;
+  --text-muted: #9A9892;
+  --border: #D1CFC9;
+  --border-light: #E8E6E3;
+  --bg: #F7F6F4;
+  --bg-card: #FFFFFF;
+  --bg-code: #F0EEEB;
+  --accent: #4A7C6F;
+  --accent-light: rgba(74, 124, 111, 0.08);
+  --accent-medium: rgba(74, 124, 111, 0.15);
+  --shadow: 0 2px 12px rgba(0,0,0,0.04);
+  --shadow-hover: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  line-height: 1.7;
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Header */
+.header {
+  background: linear-gradient(135deg, var(--mist-green-dark) 0%, var(--mist-green) 100%);
+  color: white;
+  padding: 60px 40px 50px;
+  position: relative;
+  overflow: hidden;
+}
+.header::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  opacity: 1;
+}
+.header-content { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; }
+.header h1 {
+  font-size: 32px;
+  font-weight: 400;
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+.header .subtitle {
+  font-size: 15px;
+  opacity: 0.7;
+  font-weight: 300;
+  letter-spacing: 1px;
+}
+.header .meta {
+  margin-top: 24px;
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  opacity: 0.6;
+}
+.header .meta span { display: flex; align-items: center; gap: 6px; }
+.header .meta .dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.5);
+}
+.header .meta .dot.draft { background: #FFD93D; }
+
+/* Main Content */
+.main { max-width: 900px; margin: 0 auto; padding: 40px; }
+
+/* Section */
+.section { margin-bottom: 48px; }
+.section-title {
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--mist-green);
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-title .num {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: var(--accent-light);
+  color: var(--mist-green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Info Box */
+.info-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow);
+}
+.info-box p { color: var(--text-secondary); font-size: 14px; line-height: 1.8; }
+.info-box p + p { margin-top: 10px; }
+
+/* Quote */
+.quote {
+  background: var(--accent-light);
+  border-left: 3px solid var(--mist-green);
+  padding: 16px 20px;
+  border-radius: 0 8px 8px 0;
+  margin: 16px 0;
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+/* Architecture Diagram */
+.arch-diagram {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 32px;
+  margin: 24px 0;
+  font-family: 'SF Mono', 'Monaco', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  overflow-x: auto;
+  white-space: pre;
+}
+.arch-diagram .layer { color: var(--mist-green); font-weight: 500; }
+.arch-diagram .box { color: var(--text-primary); }
+.arch-diagram .arrow { color: var(--gray-400); }
+
+/* API Endpoint */
+.endpoint {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  margin-bottom: 24px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.endpoint-header {
+  background: var(--gray-100);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+.method {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'SF Mono', monospace;
+}
+.method.get { background: var(--accent-light); color: var(--mist-green); }
+.method.post { background: rgba(91, 138, 122, 0.12); color: var(--mist-green-dark); }
+.endpoint-path {
+  font-family: 'SF Mono', monospace;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+.endpoint-body { padding: 20px; }
+.endpoint-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+/* Code Block */
+.code-block {
+  background: var(--bg-code);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 16px 20px;
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-x: auto;
+  color: var(--text-primary);
+}
+.code-block .key { color: var(--mist-green); }
+.code-block .string { color: #6B8E6B; }
+.code-block .number { color: #8B6914; }
+.code-block .boolean { color: var(--mist-green-dark); }
+.code-block .comment { color: var(--gray-400); font-style: italic; }
+
+/* Table */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 14px;
+}
+th {
+  text-align: left;
+  padding: 12px 16px;
+  background: var(--gray-100);
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border);
+}
+td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text-primary);
+}
+tr:hover td { background: var(--gray-100); }
+
+/* Checklist */
+.checklist { list-style: none; padding: 0; }
+.checklist li {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.checklist li:last-child { border-bottom: none; }
+.checklist .checkbox {
+  width: 20px; height: 20px;
+  border-radius: 6px;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.checklist .checkbox.checked {
+  background: var(--mist-green);
+  border-color: var(--mist-green);
+  position: relative;
+}
+.checklist .checkbox.checked::after {
+  content: '';
+  position: absolute;
+  left: 5px; top: 2px;
+  width: 6px; height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.checklist .check-content { flex: 1; }
+.checklist .check-title {
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.checklist .check-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* Status Badge */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.status-badge.open {
+  background: rgba(74, 124, 111, 0.1);
+  color: var(--mist-green);
+}
+.status-badge.pending {
+  background: rgba(255, 193, 7, 0.1);
+  color: #B8860B;
+}
+
+/* Footer */
+.footer {
+  border-top: 1px solid var(--border-light);
+  padding: 32px 40px;
+  margin-top: 48px;
+  background: var(--bg-card);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.footer .divider {
+  width: 40px;
+  height: 1px;
+  background: var(--border);
+  margin: 16px auto;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header { padding: 40px 24px 32px; }
+  .header h1 { font-size: 24px; }
+  .main { padding: 24px; }
+  .arch-diagram { padding: 20px; font-size: 11px; }
+  .meta { gap: 12px; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--gray-400); }
+
+/* Smooth scroll */
+html { scroll-behavior: smooth; }
+
+/* Section anchor */
+.section { scroll-margin-top: 20px; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-content">
+    <h1>ECHO 模拟器 · 接口定义文档</h1>
+    <p class="subtitle">前端 ↔ 后端 API ↔ 模拟引擎 数据契约</p>
+    <div class="meta">
+      <span><span class="dot draft"></span> 草案 v1.0</span>
+      <span>📅 2026-05-14</span>
+      <span>👤 雨娃 · 模拟机制设计小组</span>
+      <span>📋 待团队确认</span>
+    </div>
+  </div>
+</header>
+
+<!-- Main Content -->
+<main class="main">
+
+<!-- Introduction -->
+<div class="info-box">
+  <p><strong>文档目标：</strong>明确前端、后端、模拟引擎之间的数据契约，支撑团队并行开发。</p>
+  <p>本文档基于现有 <code>echo_simulator_api.py</code> 和 <code>visualization_mesa.html</code> 的已实现接口整理，覆盖 5 个 API 端点、完整数据类型定义、可视化数据格式及错误处理规范。</p>
+</div>
+
+<!-- Section 1: Architecture -->
+<div class="section" id="architecture">
+  <h2 class="section-title"><span class="num">1</span> 系统架构总览</h2>
+  <div class="arch-diagram">
+<span class="layer">┌─────────────────────────────────────────────────────────────┐</span>
+<span class="layer">│                      前端 (Frontend)                         │</span>
+<span class="box">│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐   │</span>
+<span class="box">│  │  可视化面板   │  │  配置编辑器   │  │   实验控制台      │   │</span>
+<span class="box">│  │ (D3.js)      │  │ (React)      │  │   (模式选择/启动) │   │</span>
+<span class="box">│  └──────┬───────┘  └──────┬───────┘  └────────┬─────────┘   │</span>
+<span class="arrow">└─────────┼────────────────┼──────────────────┼───────────┘</span>
+<span class="arrow">          │                │                  │</span>
+<span class="arrow">          ▼                ▼                  ▼</span>
+<span class="layer">┌─────────────────────────────────────────────────────────────┐</span>
+<span class="layer">│                   后端 API (FastAPI)                         │</span>
+<span class="box">│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐   │</span>
+<span class="box">│  │ /run         │  │ /tournament  │  │ /ab              │   │</span>
+<span class="box">│  │ /health      │  │ /config      │  │                  │   │</span>
+<span class="box">│  └──────┬───────┘  └──────┬───────┘  └────────┬─────────┘   │</span>
+<span class="arrow">└─────────┼────────────────┼──────────────────┼───────────┘</span>
+<span class="arrow">          │                │                  │</span>
+<span class="arrow">          ▼                ▼                  ▼</span>
+<span class="layer">┌─────────────────────────────────────────────────────────────┐</span>
+<span class="layer">│                模拟引擎 (Mesa/Python)                        │</span>
+<span class="box">│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐   │</span>
+<span class="box">│  │  Agent 行为   │  │  经济系统     │  │   势位评估        │   │</span>
+<span class="box">│  │  模型         │  │  (四权力)     │  │   (S-Graph)      │   │</span>
+<span class="box">│  └──────────────┘  └──────────────┘  └──────────────────┘   │</span>
+<span class="layer">└─────────────────────────────────────────────────────────────┘</span>
+  </div>
+  <p style="color: var(--text-secondary); font-size: 14px; margin-top: 12px;">架构遵循「方案A」：强化后端 Mesa 引擎，前端只做可视化。API 层承上启下，负责请求路由、参数校验和数据转换。</p>
+</div>
+
+<!-- Section 2: API Endpoints -->
+<div class="section" id="api-endpoints">
+  <h2 class="section-title"><span class="num">2</span> API 端点定义</h2>
+
+  <!-- GET /health -->
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method get">GET</span>
+      <span class="endpoint-path">/api/v1/health</span>
+    </div>
+    <div class="endpoint-body">
+      <p class="endpoint-label">健康检查 · 返回服务状态和能力列表</p>
+      <div class="code-block">
+{
+  <span class="key">"status"</span>: <span class="string">"ok"</span>,
+  <span class="key">"version"</span>: <span class="string">"1.0.0"</span>,
+  <span class="key">"engine"</span>: <span class="string">"mesa"</span>,
+  <span class="key">"capabilities"</span>: [<span class="string">"single_run"</span>, <span class="string">"tournament"</span>, <span class="string">"ab_test"</span>, <span class="string">"robustness"</span>]
+}
+      </div>
+    </div>
+  </div>
+
+  <!-- GET /config -->
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method get">GET</span>
+      <span class="endpoint-path">/api/v1/config</span>
+    </div>
+    <div class="endpoint-body">
+      <p class="endpoint-label">获取默认配置 · 返回模拟器默认参数和可选枚举值</p>
+      <div class="code-block">
+{
+  <span class="key">"default_simulation"</span>: {
+    <span class="key">"duration_days"</span>: <span class="number">30</span>,
+    <span class="key">"num_creators"</span>: <span class="number">6</span>,
+    <span class="key">"num_users"</span>: <span class="number">20</span>,
+    <span class="key">"seed"</span>: <span class="boolean">null</span>
+  },
+  <span class="key">"creator_types"</span>: [<span class="string">"保守型"</span>, <span class="string">"开放型"</span>, <span class="string">"平衡型"</span>, <span class="string">"策略型"</span>],
+  <span class="key">"user_roles"</span>: [<span class="string">"浏览者"</span>, <span class="string">"引用者"</span>, <span class="string">"改编者"</span>, <span class="string">"传播者"</span>, <span class="string">"付费者"</span>, <span class="string">"争议者"</span>],
+  <span class="key">"four_powers"</span>: {
+    <span class="key">"铸"</span>: <span class="string">"铸造权"</span>,
+    <span class="key">"衍"</span>: <span class="string">"衍生权"</span>,
+    <span class="key">"扩"</span>: <span class="string">"扩展权"</span>,
+    <span class="key">"收"</span>: <span class="string">"收益权"</span>
+  }
+}
+      </div>
+    </div>
+  </div>
+
+  <!-- POST /run -->
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method post">POST</span>
+      <span class="endpoint-path">/api/v1/run</span>
+    </div>
+    <div class="endpoint-body">
+      <p class="endpoint-label">单次模拟运行 · 完整的创作者/用户/环境配置</p>
+      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">请求体含完整配置，响应含时序数据、创作者结果、资产生命周期、S-Graph数据</p>
+      <div class="code-block">
+<span class="comment">// 请求：完整模拟配置</span>
+{
+  <span class="key">"simulation_config"</span>: {
+    <span class="key">"duration_days"</span>: <span class="number">30</span>,
+    <span class="key">"num_creators"</span>: <span class="number">6</span>,
+    <span class="key">"num_users"</span>: <span class="number">20</span>,
+    <span class="key">"seed"</span>: <span class="number">42</span>
+  },
+  <span class="key">"creators"</span>: [
+    {
+      <span class="key">"id"</span>: <span class="string">"creator_1"</span>,
+      <span class="key">"name"</span>: <span class="string">"林水墨"</span>,
+      <span class="key">"type"</span>: <span class="string">"保守型"</span>,
+      <span class="key">"asset_config"</span>: {
+        <span class="key">"铸"</span>: { <span class="key">"enabled"</span>: <span class="boolean">true</span>, <span class="key">"price"</span>: <span class="number">100</span> },
+        <span class="key">"衍"</span>: { <span class="key">"enabled"</span>: <span class="boolean">true</span>, <span class="key">"max_derivatives"</span>: <span class="number">3</span>, <span class="key">"fee_percent"</span>: <span class="number">15</span> },
+        <span class="key">"扩"</span>: { <span class="key">"enabled"</span>: <span class="boolean">true</span>, <span class="key">"platforms"</span>: [<span class="string">"web"</span>, <span class="string">"app"</span>] },
+        <span class="key">"收"</span>: { <span class="key">"enabled"</span>: <span class="boolean">true</span>, <span class="key">"revenue_share"</span>: <span class="number">70</span> }
+      },
+      <span class="key">"initial_work"</span>: {
+        <span class="key">"title"</span>: <span class="string">"《晨曦》"</span>,
+        <span class="key">"category"</span>: <span class="string">"视觉艺术"</span>,
+        <span class="key">"quality_score"</span>: <span class="number">8.5</span>
+      }
+    }
+  ],
+  <span class="key">"users"</span>: [...],
+  <span class="key">"environment_params"</span>: {
+    <span class="key">"platform_fee_percent"</span>: <span class="number">5</span>,
+    <span class="key">"discovery_algorithm"</span>: <span class="string">"trending"</span>,
+    <span class="key">"market_growth_rate"</span>: <span class="number">0.02</span>
+  }
+}
+      </div>
+      <div class="code-block" style="margin-top: 16px;">
+<span class="comment">// 响应：模拟结果</span>
+{
+  <span class="key">"run_id"</span>: <span class="string">"run_20260514_001"</span>,
+  <span class="key">"status"</span>: <span class="string">"completed"</span>,
+  <span class="key">"summary"</span>: {
+    <span class="key">"total_events"</span>: <span class="number">1196</span>,
+    <span class="key">"onchain_events"</span>: <span class="number">310</span>,
+    <span class="key">"total_revenue"</span>: <span class="number">2847.50</span>,
+    <span class="key">"creator_satisfaction"</span>: <span class="number">6.8</span>,
+    <span class="key">"ecosystem_health"</span>: <span class="number">0.72</span>
+  },
+  <span class="key">"timeseries"</span>: [
+    { <span class="key">"day"</span>: <span class="number">1</span>, <span class="key">"active_users"</span>: <span class="number">18</span>, <span class="key">"events"</span>: <span class="number">45</span>, <span class="key">"revenue"</span>: <span class="number">12.00</span> }
+  ],
+  <span class="key">"creator_results"</span>: [...],
+  <span class="key">"asset_lifecycle"</span>: [
+    {
+      <span class="key">"asset_id"</span>: <span class="string">"asset_1"</span>,
+      <span class="key">"shi_timeline"</span>: [
+        { <span class="key">"day"</span>: <span class="number">1</span>, <span class="key">"position"</span>: [<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>] },
+        { <span class="key">"day"</span>: <span class="number">30</span>, <span class="key">"position"</span>: [<span class="number">2</span>, <span class="number">3</span>, <span class="number">2</span>] }
+      ]
+    }
+  ],
+  <span class="key">"s_graph_data"</span>: { <span class="key">"nodes"</span>: [...], <span class="key">"edges"</span>: [...] }
+}
+      </div>
+    </div>
+  </div>
+
+  <!-- POST /tournament -->
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method post">POST</span>
+      <span class="endpoint-path">/api/v1/tournament</span>
+    </div>
+    <div class="endpoint-body">
+      <p class="endpoint-label">配置策略锦标赛 · 对比4种策略类型的表现</p>
+      <div class="code-block">
+<span class="comment">// 请求</span>
+{
+  <span class="key">"strategies"</span>: [<span class="string">"保守型"</span>, <span class="string">"开放型"</span>, <span class="string">"平衡型"</span>, <span class="string">"策略型"</span>],
+  <span class="key">"simulation_config"</span>: {
+    <span class="key">"duration_days"</span>: <span class="number">30</span>,
+    <span class="key">"runs_per_strategy"</span>: <span class="number">10</span>,
+    <span class="key">"num_users"</span>: <span class="number">20</span>
+  },
+  <span class="key">"metrics"</span>: [<span class="string">"revenue"</span>, <span class="string">"satisfaction"</span>, <span class="string">"ecosystem_health"</span>, <span class="string">"asset_growth"</span>]
+}
+
+<span class="comment">// 响应</span>
+{
+  <span class="key">"tournament_id"</span>: <span class="string">"tour_20260514_001"</span>,
+  <span class="key">"results"</span>: {
+    <span class="key">"保守型"</span>: { <span class="key">"avg_revenue"</span>: <span class="number">234.50</span>, <span class="key">"win_count"</span>: <span class="number">2</span> },
+    <span class="key">"开放型"</span>: { <span class="key">"avg_revenue"</span>: <span class="number">460.00</span>, <span class="key">"win_count"</span>: <span class="number">5</span> }
+  },
+  <span class="key">"ranking"</span>: [<span class="string">"开放型"</span>, <span class="string">"平衡型"</span>, <span class="string">"策略型"</span>, <span class="string">"保守型"</span>],
+  <span class="key">"statistical_significance"</span>: {
+    <span class="key">"open_vs_conservative"</span>: { <span class="key">"p_value"</span>: <span class="number">0.003</span>, <span class="key">"significant"</span>: <span class="boolean">true</span> }
+  }
+}
+      </div>
+    </div>
+  </div>
+
+  <!-- POST /ab -->
+  <div class="endpoint">
+    <div class="endpoint-header">
+      <span class="method post">POST</span>
+      <span class="endpoint-path">/api/v1/ab</span>
+    </div>
+    <div class="endpoint-body">
+      <p class="endpoint-label">A/B 对照实验 · ECHO 生态 vs 传统平台</p>
+      <div class="code-block">
+<span class="comment">// 请求</span>
+{
+  <span class="key">"echo_group"</span>: {
+    <span class="key">"enabled"</span>: <span class="boolean">true</span>,
+    <span class="key">"platform_fee"</span>: <span class="number">5</span>,
+    <span class="key">"rights_enabled"</span>: [<span class="string">"铸"</span>, <span class="string">"衍"</span>, <span class="string">"扩"</span>, <span class="string">"收"</span>]
+  },
+  <span class="key">"control_group"</span>: {
+    <span class="key">"enabled"</span>: <span class="boolean">false</span>,
+    <span class="key">"platform_fee"</span>: <span class="number">30</span>,
+    <span class="key">"rights_enabled"</span>: [<span class="string">"收"</span>]
+  },
+  <span class="key">"simulation_config"</span>: {
+    <span class="key">"duration_days"</span>: <span class="number">90</span>,
+    <span class="key">"num_runs"</span>: <span class="number">100</span>,
+    <span class="key">"num_creators"</span>: <span class="number">100</span>,
+    <span class="key">"num_users"</span>: <span class="number">500</span>
+  },
+  <span class="key">"metrics"</span>: [
+    <span class="string">"total_creator_revenue"</span>,
+    <span class="string">"creator_retention_rate"</span>,
+    <span class="string">"ecosystem_diversity"</span>,
+    <span class="string">"user_engagement"</span>
+  ]
+}
+
+<span class="comment">// 响应：含假设检验统计结果</span>
+{
+  <span class="key">"ab_test_id"</span>: <span class="string">"ab_20260514_001"</span>,
+  <span class="key">"echo_group"</span>: { <span class="key">"mean_revenue"</span>: <span class="number">4520.00</span>, <span class="key">"mean_retention"</span>: <span class="number">0.78</span> },
+  <span class="key">"control_group"</span>: { <span class="key">"mean_revenue"</span>: <span class="number">2800.00</span>, <span class="key">"mean_retention"</span>: <span class="number">0.45</span> },
+  <span class="key">"hypothesis_test"</span>: {
+    <span class="key">"t_statistic"</span>: <span class="number">4.56</span>,
+    <span class="key">"p_value"</span>: <span class="number">0.0001</span>,
+    <span class="key">"significant"</span>: <span class="boolean">true</span>,
+    <span class="key">"effect_size"</span>: <span class="number">0.45</span>
+  }
+}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Section 3: Data Types -->
+<div class="section" id="data-types">
+  <h2 class="section-title"><span class="num">3</span> 核心数据类型定义</h2>
+
+  <h3 style="color: var(--text-secondary); font-weight: 500; margin-bottom: 16px;">3.1 创作者配置 CreatorConfig</h3>
+  <div class="code-block">
+{
+  <span class="key">"id"</span>: <span class="string">"creator_1"</span>,              <span class="comment">// 唯一标识</span>
+  <span class="key">"name"</span>: <span class="string">"林水墨"</span>,              <span class="comment">// 创作者名称</span>
+  <span class="key">"type"</span>: <span class="string">"保守型"</span>,               <span class="comment">// 枚举：保守型/开放型/平衡型/策略型</span>
+  <span class="key">"asset_config"</span>: {
+    <span class="key">"铸"</span>: { <span class="key">"enabled"</span>: <span class="boolean">true</span>, <span class="key">"price"</span>: <span class="number">100</span>, <span class="key">"currency"</span>: <span class="string">"ECHO"</span> },
+    <span class="key">"衍"</span>: { <span class="key">"enabled"</span>: <span class="boolean">true</span>, <span class="key">"max_derivatives"</span>: <span class="number">3</span>, <span class="key">"fee_percent"</span>: <span class="number">15</span>, <span class="key">"approval_required"</span>: <span class="boolean">false</span> },
+    <span class="key">"扩"</span>: { <span class="key">"enabled"</span>: <span class="boolean">true</span>, <span class="key">"platforms"</span>: [<span class="string">"web"</span>, <span class="string">"app"</span>], <span class="key">"auto_approve"</span>: <span class="boolean">true</span> },
+    <span class="key">"收"</span>: { <span class="key">"enabled"</span>: <span class="boolean">true</span>, <span class="key">"revenue_share"</span>: <span class="number">70</span>, <span class="key">"instant_payout"</span>: <span class="boolean">true</span> }
+  },
+  <span class="key">"initial_work"</span>: {
+    <span class="key">"title"</span>: <span class="string">"《晨曦》"</span>,
+    <span class="key">"category"</span>: <span class="string">"视觉艺术"</span>,
+    <span class="key">"quality_score"</span>: <span class="number">8.5</span>   <span class="comment">// 0-10</span>
+  },
+  <span class="key">"behavior_params"</span>: {               <span class="comment">// 可选：行为参数</span>
+    <span class="key">"adaptability"</span>: <span class="number">0.5</span>,          <span class="comment">// 配置调整意愿 0-1</span>
+    <span class="key">"quality_focus"</span>: <span class="number">0.8</span>,         <span class="comment">// 质量vs数量偏好</span>
+    <span class="key">"social_activity"</span>: <span class="number">0.6</span>       <span class="comment">// 社区参与度</span>
+  }
+}
+  </div>
+
+  <h3 style="color: var(--text-secondary); font-weight: 500; margin: 24px 0 16px;">3.2 用户行为配置 UserConfig</h3>
+  <div class="code-block">
+{
+  <span class="key">"id"</span>: <span class="string">"user_1"</span>,
+  <span class="key">"role"</span>: <span class="string">"浏览者"</span>,             <span class="comment">// 枚举：6种角色</span>
+  <span class="key">"behavior_profile"</span>: {
+    <span class="key">"activity_level"</span>: <span class="number">0.7</span>,      <span class="comment">// 每日活跃概率</span>
+    <span class="key">"preference_categories"</span>: [<span class="string">"视觉艺术"</span>, <span class="string">"音乐"</span>],
+    <span class="key">"price_sensitivity"</span>: <span class="number">0.3</span>,   <span class="comment">// 价格敏感程度</span>
+    <span class="key">"discovery_bias"</span>: <span class="string">"trending"</span>, <span class="comment">// 发现偏好：trending/random/category/creator</span>
+    <span class="key">"interaction_depth"</span>: <span class="string">"engaged"</span>  <span class="comment">// 互动深度：surface/deep/engaged</span>
+  },
+  <span class="key">"memory_params"</span>: {
+    <span class="key">"short_term_window"</span>: <span class="number">7</span>,     <span class="comment">// 短期记忆窗口（天）</span>
+    <span class="key">"trend_sensitivity"</span>: <span class="number">0.5</span>    <span class="comment">// 趋势敏感度</span>
+  }
+}
+  </div>
+
+  <h3 style="color: var(--text-secondary); font-weight: 500; margin: 24px 0 16px;">3.3 势位评估结果 ShiPosition</h3>
+  <div class="code-block">
+{
+  <span class="key">"time_dimension"</span>: <span class="number">2</span>,       <span class="comment">// 时间维：0-3，基于事件数量</span>
+  <span class="key">"space_dimension"</span>: <span class="number">3</span>,      <span class="comment">// 空间维：0-3，基于平台覆盖</span>
+  <span class="key">"relation_dimension"</span>: <span class="number">2</span>,   <span class="comment">// 关系维：0-3，基于关系事件数</span>
+  <span class="key">"overall_level"</span>: <span class="number">2</span>,        <span class="comment">// 综合势位：0-3</span>
+  <span class="key">"timestamp"</span>: <span class="string">"2026-05-14T09:17:00Z"</span>
+}
+  </div>
+</div>
+
+<!-- Section 4: Error Handling -->
+<div class="section" id="errors">
+  <h2 class="section-title"><span class="num">4</span> 错误处理规范</h2>
+  <div class="info-box">
+    <p style="margin-bottom: 12px;">标准错误格式：</p>
+    <div class="code-block">
+{
+  <span class="key">"error"</span>: {
+    <span class="key">"code"</span>: <span class="string">"INVALID_CONFIG"</span>,
+    <span class="key">"message"</span>: <span class="string">"创作者配置中铸权力价格不能为负数"</span>,
+    <span class="key">"field"</span>: <span class="string">"creators[0].asset_config.铸.price"</span>,
+    <span class="key">"suggestion"</span>: <span class="string">"请设置大于等于0的价格，或使用-1表示免费"</span>
+  }
+}
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>错误码</th><th>说明</th><th>HTTP</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>INVALID_CONFIG</code></td><td>配置参数错误</td><td>400</td></tr>
+      <tr><td><code>SIMULATION_FAILED</code></td><td>模拟运行失败</td><td>500</td></tr>
+      <tr><td><code>TIMEOUT</code></td><td>模拟超时（大规模运行）</td><td>504</td></tr>
+      <tr><td><code>UNSUPPORTED_MODE</code></td><td>不支持的实验模式</td><td>400</td></tr>
+      <tr><td><code>RATE_LIMIT</code></td><td>请求频率限制</td><td>429</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Section 5: Pending Items -->
+<div class="section" id="pending">
+  <h2 class="section-title"><span class="num">5</span> 待确认事项（7项）</h2>
+  <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">建议本周末对齐会确认以下事项，冻结后进入实现阶段。</p>
+
+  <ul class="checklist">
+    <li>
+      <div class="checkbox"></div>
+      <div class="check-content">
+        <div class="check-title">势位评估维度</div>
+        <div class="check-desc">是否只有3个维度（时间/空间/关系），还是需要扩展？</div>
+      </div>
+      <span class="status-badge pending">待确认</span>
+    </li>
+    <li>
+      <div class="checkbox"></div>
+      <div class="check-content">
+        <div class="check-title">A/B 对照组平台抽成</div>
+        <div class="check-desc">是否固定30%？还是作为可调参数？</div>
+      </div>
+      <span class="status-badge pending">待确认</span>
+    </li>
+    <li>
+      <div class="checkbox"></div>
+      <div class="check-content">
+        <div class="check-title">创作者行为参数</div>
+        <div class="check-desc">adaptability / quality_focus / social_activity 是否需要？还是先简化？</div>
+      </div>
+      <span class="status-badge pending">待确认</span>
+    </li>
+    <li>
+      <div class="checkbox"></div>
+      <div class="check-content">
+        <div class="check-title">并发性能目标</div>
+        <div class="check-desc">1000创作者/5000用户 vs 100/500？阶段性目标是什么？</div>
+      </div>
+      <span class="status-badge pending">待确认</span>
+    </li>
+    <li>
+      <div class="checkbox"></div>
+      <div class="check-content">
+        <div class="check-title">实时模式技术选型</div>
+        <div class="check-desc">WebSocket 推送 vs HTTP 轮询？</div>
+      </div>
+      <span class="status-badge pending">待确认</span>
+    </li>
+    <li>
+      <div class="checkbox"></div>
+      <div class="check-content">
+        <div class="check-title">技术路线确认</div>
+        <div class="check-desc">方案A（强化后端 Mesa）是否接受？还是倾向方案B/C？</div>
+      </div>
+      <span class="status-badge pending">待确认</span>
+    </li>
+    <li>
+      <div class="checkbox"></div>
+      <div class="check-content">
+        <div class="check-title">7模块划分确认</div>
+        <div class="check-desc">Seaman 手绘第二页的7个核心模块划分是否准确？</div>
+      </div>
+      <span class="status-badge pending">待确认</span>
+    </li>
+  </ul>
+</div>
+
+<!-- Section 6: Version -->
+<div class="section" id="version">
+  <h2 class="section-title"><span class="num">6</span> 版本控制</h2>
+  <div class="info-box">
+    <table>
+      <tbody>
+        <tr><td><strong>当前版本</strong></td><td>v1.0 (草案)</td></tr>
+        <tr><td><strong>版本策略</strong></td><td>端点路径包含版本前缀 <code>/api/v1/</code></td></tr>
+        <tr><td><strong>向后兼容</strong></td><td>小版本保持兼容，大版本通过新路径 <code>/api/v2/</code></td></tr>
+        <tr><td><strong>变更日志</strong></td><td>记录在 <code>docs/api-changelog.md</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</main>
+
+<!-- Footer -->
+<footer class="footer">
+  <div class="divider"></div>
+  <p>ECHO · 万物有灵，皆可生长</p>
+  <p style="margin-top: 8px; font-size: 12px;">文档由雨娃整理 · 基于 echo_simulator_api.py & visualization_mesa.html</p>
+  <p style="margin-top: 4px; font-size: 12px;">2026-05-14 · 待团队确认后冻结 v1.0</p>
+</footer>
+
+</body>
+</html>

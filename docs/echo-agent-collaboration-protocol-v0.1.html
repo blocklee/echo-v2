@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECHO 模拟器多 Agent 协作协议 v0.1</title>
+    <style>
+        :root {
+            --paper: #f5f3ef;
+            --ink-dark: #2c3e3a;
+            --ink-medium: #4A7C6F;
+            --ink-light: #7a8b82;
+            --vermilion: #c44536;
+            --gold: #c4a35a;
+            --jade: #4A7C6F;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "LXGW WenKai", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: var(--paper);
+            color: var(--ink-dark);
+            line-height: 1.8;
+        }
+        .header {
+            text-align: center;
+            padding: 60px 20px 40px;
+            border-bottom: 1px solid rgba(44,62,58,0.1);
+            background: linear-gradient(135deg, #f5f3ef 0%, #e8e4df 100%);
+        }
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 400;
+            letter-spacing: 0.2em;
+            margin-bottom: 12px;
+        }
+        .header .subtitle {
+            color: var(--ink-light);
+            font-size: 0.95rem;
+            margin-bottom: 16px;
+        }
+        .meta-badge {
+            display: inline-block;
+            background: var(--jade);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin: 4px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 400;
+            margin: 40px 0 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--ink-medium);
+            color: var(--ink-dark);
+        }
+        h3 {
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin: 30px 0 15px;
+            color: var(--ink-medium);
+        }
+        h4 {
+            font-size: 1.05rem;
+            font-weight: 500;
+            margin: 20px 0 10px;
+            color: var(--ink-dark);
+        }
+        p {
+            margin: 12px 0;
+            text-align: justify;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.9rem;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(44,62,58,0.1);
+        }
+        th {
+            background: rgba(74,124,111,0.1);
+            font-weight: 500;
+            color: var(--ink-medium);
+        }
+        tr:hover {
+            background: rgba(74,124,111,0.05);
+        }
+        code {
+            background: rgba(44,62,58,0.05);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: "SF Mono", "Fira Code", monospace;
+            font-size: 0.9em;
+        }
+        pre {
+            background: rgba(44,62,58,0.05);
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 16px 0;
+        }
+        pre code {
+            background: none;
+            padding: 0;
+        }
+        ul, ol {
+            margin: 12px 0;
+            padding-left: 24px;
+        }
+        li {
+            margin: 6px 0;
+        }
+        blockquote {
+            border-left: 3px solid var(--ink-medium);
+            padding-left: 16px;
+            margin: 16px 0;
+            color: var(--ink-light);
+            font-style: italic;
+        }
+        strong {
+            color: var(--ink-dark);
+            font-weight: 600;
+        }
+        a {
+            color: var(--ink-medium);
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.3s;
+        }
+        a:hover {
+            border-bottom-color: var(--ink-medium);
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin: 2px;
+        }
+        .status-done {
+            background: rgba(74,124,111,0.15);
+            color: var(--jade);
+        }
+        .status-wait {
+            background: rgba(196,163,90,0.15);
+            color: var(--gold);
+        }
+        .footer {
+            text-align: center;
+            padding: 40px 20px;
+            border-top: 1px solid rgba(44,62,58,0.1);
+            color: var(--ink-light);
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>ECHO 模拟器多 Agent 协作协议</h1>
+        <div class="subtitle">雨娃 × Talus 联合制定</div>
+        <span class="meta-badge">v0.1 草案</span>
+        <span class="meta-badge">2026-05-15</span>
+    </div>
+    
+    <div class="container">
+<h1>ECHO 模拟器多 Agent 协作协议 v0.1</h1>
+<p><strong>制定者</strong>：雨娃 × Talus
+<strong>时间</strong>：2026-05-15
+<strong>状态</strong>：草案，等待团队确认</p>
+<hr />
+<h2>一、项目愿景</h2>
+<p>让 ECHO 模拟器由多个 Agent 协作构建，而非单一 Agent 或人类团队"设计好后交给 Agent 运行"。</p>
+<p>核心理念：<strong>Agent 协作本身就是在模拟多 Agent 生态</strong>。</p>
+<hr />
+<h2>二、参与成员与角色</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">成员</th>
+<th style="text-align: left;">Agent 状态</th>
+<th style="text-align: left;">角色域</th>
+<th style="text-align: left;">核心贡献</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Talus</strong> (听风/Lucifer)</td>
+<td style="text-align: left;">✅ 有 OpenClaw</td>
+<td style="text-align: left;">协议机制层</td>
+<td style="text-align: left;">仲裁、异议、势位规则设计</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>雨娃</strong> (雅婷)</td>
+<td style="text-align: left;">✅ 有 OpenClaw</td>
+<td style="text-align: left;">协调 + 架构</td>
+<td style="text-align: left;">Agent 行为模型、系统整合</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Seaman</strong></td>
+<td style="text-align: left;">❓ 待确认</td>
+<td style="text-align: left;">势位计算引擎</td>
+<td style="text-align: left;">64 卦约束、S-Graph 技术实现</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>听风/Lucifer</strong></td>
+<td style="text-align: left;">❓ 待确认</td>
+<td style="text-align: left;">技术架构 + 协议机制（通过 Talus 参与）</td>
+<td style="text-align: left;">可信执行环境、基础设施</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>M77</strong></td>
+<td style="text-align: left;">❓ 待确认</td>
+<td style="text-align: left;">协议补充</td>
+<td style="text-align: left;">元规则协议细化</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>雅怡</strong> (cat.zhou)</td>
+<td style="text-align: left;">❓ 待确认</td>
+<td style="text-align: left;">产品设计</td>
+<td style="text-align: left;">曝光阶梯 UX、创作者体验</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>李嫚</strong></td>
+<td style="text-align: left;">❓ 待确认</td>
+<td style="text-align: left;">前端实现</td>
+<td style="text-align: left;">模拟器可视化界面</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>王岚</strong></td>
+<td style="text-align: left;">❓ 待确认</td>
+<td style="text-align: left;">前端实现</td>
+<td style="text-align: left;">配置面板、交互设计</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>注</strong>：当前确认有 OpenClaw 环境的 Agent 只有 2 个：Talis（听风/Lucifer）和雨娃（雅婷）。其他成员（Seaman、雅怡、李嫚、王岚、M77）是人类，需要手动参与讨论和代码实现。</p>
+</blockquote>
+<hr />
+<h2>三、通信基础设施</h2>
+<h3>3.1 三层通信架构</h3>
+<pre><code>┌─────────────────────────────────────┐
+│  层1：飞书群（实时通知）              │
+│  - 人类触发重要讨论                   │
+│  - Agent 用 post 格式 @ 触发通知    │
+│  - 不适合长文本技术讨论               │
+├─────────────────────────────────────┤
+│  层2：共享文档（设计草案）            │
+│  - 飞书 Wiki / GitHub Markdown       │
+│  - 所有 Agent 共同读写                │
+│  - 版本历史可追溯                     │
+├─────────────────────────────────────┤
+│  层3：Git 仓库（代码实现）            │
+│  - 各 Agent 负责模块                  │
+│  - PR + CI 测试 + 人类 review         │
+│  - 自动化回归测试                     │
+└─────────────────────────────────────┘
+</code></pre>
+<h3>3.2 Agent 间通信规则</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">场景</th>
+<th style="text-align: left;">方式</th>
+<th style="text-align: left;">格式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">紧急通知</td>
+<td style="text-align: left;">飞书群 post 格式 @</td>
+<td style="text-align: left;"><code>{"tag":"at","user_id":"ou_xxx"}</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">技术讨论</td>
+<td style="text-align: left;">共享文档评论区</td>
+<td style="text-align: left;">Markdown 评论</td>
+</tr>
+<tr>
+<td style="text-align: left;">代码提交</td>
+<td style="text-align: left;">Git PR</td>
+<td style="text-align: left;">标准 PR 描述</td>
+</tr>
+<tr>
+<td style="text-align: left;">设计草案</td>
+<td style="text-align: left;">共享文档编辑</td>
+<td style="text-align: left;">Markdown / 表格</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>重要</strong>：bot @ bot 不触发飞书通知。必须用 post 格式的 @ 才能通知到对方。</p>
+</blockquote>
+<hr />
+<h2>四、决策机制</h2>
+<h3>4.1 分层决策</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">分歧类型</th>
+<th style="text-align: left;">决策方式</th>
+<th style="text-align: left;">仲裁者</th>
+<th style="text-align: left;">例子</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">技术实现细节</td>
+<td style="text-align: left;">预设规则（谁的领域谁决定）</td>
+<td style="text-align: left;">该领域负责人</td>
+<td style="text-align: left;">仲裁逻辑听 Talus</td>
+</tr>
+<tr>
+<td style="text-align: left;">产品方向</td>
+<td style="text-align: left;">人类一锤定音</td>
+<td style="text-align: left;">雅婷 / 雅怡</td>
+<td style="text-align: left;">曝光阶梯 UX</td>
+</tr>
+<tr>
+<td style="text-align: left;">协议逻辑</td>
+<td style="text-align: left;">辩论 + 多数投票</td>
+<td style="text-align: left;">相关 Agent</td>
+<td style="text-align: left;">λ 衰减默认值</td>
+</tr>
+<tr>
+<td style="text-align: left;">架构设计</td>
+<td style="text-align: left;">技术负责人共识</td>
+<td style="text-align: left;">Seaman + 听风</td>
+<td style="text-align: left;">前后端分离方案</td>
+</tr>
+<tr>
+<td style="text-align: left;">无法共识</td>
+<td style="text-align: left;">人类仲裁</td>
+<td style="text-align: left;">雅婷</td>
+<td style="text-align: left;">所有 Agent 反对的方案</td>
+</tr>
+</tbody>
+</table>
+<h3>4.2 预设权重（V1 简化）</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">领域</th>
+<th style="text-align: left;">权重分配</th>
+<th style="text-align: left;">说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">协议机制</td>
+<td style="text-align: left;">Talus 0.4 / 雨娃 0.3 / 听风/Talus 0.3</td>
+<td style="text-align: left;">仲裁、异议、势位</td>
+</tr>
+<tr>
+<td style="text-align: left;">技术架构</td>
+<td style="text-align: left;">Seaman 0.5 / 听风 0.3 / 孙泽宇 0.2</td>
+<td style="text-align: left;">引擎、基础设施</td>
+</tr>
+<tr>
+<td style="text-align: left;">产品设计</td>
+<td style="text-align: left;">雅怡 0.6 / 雨娃 0.2 / Talus 0.2</td>
+<td style="text-align: left;">UX、创作者体验</td>
+</tr>
+<tr>
+<td style="text-align: left;">前端实现</td>
+<td style="text-align: left;">李嫚 0.4 / 王岚 0.4 / 雅怡 0.2</td>
+<td style="text-align: left;">界面、可视化</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>五、输出验证流程</h2>
+<h3>5.1 四层验证</h3>
+<pre><code>Agent A 完成模块
+    ↓
+自验证：Agent B 运行 Agent A 代码 → 通过？
+    ↓ 否 → 返回修改
+    ↓ 是
+交叉验证：Agent C review 设计文档 → 认可？
+    ↓ 否 → 辩论修正
+    ↓ 是
+人类验证：雅婷/雅怡检查是否偏离 ECHO 意图 → 认可？
+    ↓ 否 → 重新设计
+    ↓ 是
+回归测试：CI 跑全量测试 → 通过？
+    ↓ 否 → 修复 bug
+    ↓ 是
+合并到主分支 ✅
+</code></pre>
+<h3>5.2 验证标准</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">层级</th>
+<th style="text-align: left;">标准</th>
+<th style="text-align: left;">负责人</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">自验证</td>
+<td style="text-align: left;">代码能运行，不报错</td>
+<td style="text-align: left;">写代码的 Agent</td>
+</tr>
+<tr>
+<td style="text-align: left;">交叉验证</td>
+<td style="text-align: left;">设计符合协议，无逻辑漏洞</td>
+<td style="text-align: left;">其他 Agent</td>
+</tr>
+<tr>
+<td style="text-align: left;">人类验证</td>
+<td style="text-align: left;">符合 ECHO 设计意图</td>
+<td style="text-align: left;">雅婷 / 雅怡</td>
+</tr>
+<tr>
+<td style="text-align: left;">回归测试</td>
+<td style="text-align: left;">不破坏已有功能</td>
+<td style="text-align: left;">CI 自动化</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>六、Phase 1 启动计划（本周）</h2>
+<h3>6.1 目标</h3>
+<p>实现<strong>异议仲裁模块代码化</strong>，验证 3 种立场 Agent 的仲裁场景。</p>
+<h3>6.2 参与 Agent</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Agent</th>
+<th style="text-align: left;">负责</th>
+<th style="text-align: left;">输入</th>
+<th style="text-align: left;">输出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Talus</strong></td>
+<td style="text-align: left;">仲裁协议层</td>
+<td style="text-align: left;">异议数据、势位数据</td>
+<td style="text-align: left;">仲裁结果、惩罚决策</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>雨娃</strong></td>
+<td style="text-align: left;">协调 + 立场模型</td>
+<td style="text-align: left;">协议定义、人格参数</td>
+<td style="text-align: left;">Agent 行为模拟</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Seaman</strong></td>
+<td style="text-align: left;">势位计算引擎</td>
+<td style="text-align: left;">事件数据、S-Graph</td>
+<td style="text-align: left;">势位评估、阈值判断</td>
+</tr>
+</tbody>
+</table>
+<h3>6.3 里程碑</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">时间</th>
+<th style="text-align: left;">里程碑</th>
+<th style="text-align: left;">验证标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Day 1-2</td>
+<td style="text-align: left;">设计文档冻结</td>
+<td style="text-align: left;">3 个 Agent 都确认接口</td>
+</tr>
+<tr>
+<td style="text-align: left;">Day 3-4</td>
+<td style="text-align: left;">各自实现模块</td>
+<td style="text-align: left;">自验证通过</td>
+</tr>
+<tr>
+<td style="text-align: left;">Day 5</td>
+<td style="text-align: left;">联调测试</td>
+<td style="text-align: left;">交叉验证通过</td>
+</tr>
+<tr>
+<td style="text-align: left;">Day 6-7</td>
+<td style="text-align: left;">人类 review</td>
+<td style="text-align: left;">雅婷/雅怡确认</td>
+</tr>
+</tbody>
+</table>
+<h3>6.4 如果 Seaman 无 Agent 环境</h3>
+<p>备选方案：
+1. 雨娃手动读取 Seaman 的技术文档
+2. 按文档实现势位计算引擎
+3. 实现后请 Seaman 人类 review
+4. Phase 2 再考虑自动化接入</p>
+<hr />
+<h2>七、已有共识汇总（供新加入 Agent 快速上下文）</h2>
+<h3>7.1 协议层共识（7 条）</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">#</th>
+<th style="text-align: left;">共识</th>
+<th style="text-align: left;">关键设计</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">梯度仲裁惩罚</td>
+<td style="text-align: left;">初犯冻收益→累犯公示→多次降级</td>
+</tr>
+<tr>
+<td style="text-align: left;">2</td>
+<td style="text-align: left;">双重异议阈值</td>
+<td style="text-align: left;">(独立异议 ≥ 3) OR (反对者 ≥ max(2, 20%))</td>
+</tr>
+<tr>
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">冷启动曝光阶梯</td>
+<td style="text-align: left;">0 收入=0 费用，毕业=曝光升级</td>
+</tr>
+<tr>
+<td style="text-align: left;">4</td>
+<td style="text-align: left;">S-Graph 空间维度</td>
+<td style="text-align: left;">方法/场景多样性</td>
+</tr>
+<tr>
+<td style="text-align: left;">5</td>
+<td style="text-align: left;">ε-greedy 对照组</td>
+<td style="text-align: left;">10% 随机行为 Agent</td>
+</tr>
+<tr>
+<td style="text-align: left;">6</td>
+<td style="text-align: left;">λ 衰减函数</td>
+<td style="text-align: left;">按事件类型差异化（0.01~0.10）</td>
+</tr>
+<tr>
+<td style="text-align: left;">7</td>
+<td style="text-align: left;">Agent 立场多元化</td>
+<td style="text-align: left;">开源信仰者/版权捍卫者/经济理性人</td>
+</tr>
+</tbody>
+</table>
+<h3>7.2 技术层共识</h3>
+<ul>
+<li>前后端分离架构（FastAPI + Mesa + D3.js）</li>
+<li>共享 Git 仓库协作</li>
+<li>PR + CI + 人类 review 流程</li>
+</ul>
+<h3>7.3 通信层共识</h3>
+<ul>
+<li>post 格式 @ 是唯一可行的 bot-to-bot 通知方式</li>
+<li>sessions_send 跨树通信不可行</li>
+<li>文档先行，Agent 陆续加入</li>
+</ul>
+<hr />
+<h2>八、下一步行动</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">行动</th>
+<th style="text-align: left;">负责人</th>
+<th style="text-align: left;">截止时间</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">确认各成员 Agent 环境</td>
+<td style="text-align: left;">雅婷</td>
+<td style="text-align: left;">2026-05-16</td>
+</tr>
+<tr>
+<td style="text-align: left;">创建共享 Git 仓库</td>
+<td style="text-align: left;">雨娃</td>
+<td style="text-align: left;">2026-05-16</td>
+</tr>
+<tr>
+<td style="text-align: left;">冻结 Phase 1 设计文档</td>
+<td style="text-align: left;">Talus + 雨娃</td>
+<td style="text-align: left;">2026-05-17</td>
+</tr>
+<tr>
+<td style="text-align: left;">Seaman 势位文档对接</td>
+<td style="text-align: left;">雨娃</td>
+<td style="text-align: left;">2026-05-17</td>
+</tr>
+<tr>
+<td style="text-align: left;">各 Agent 实现模块</td>
+<td style="text-align: left;">Talus / 雨娃 / Seaman</td>
+<td style="text-align: left;">2026-05-20</td>
+</tr>
+<tr>
+<td style="text-align: left;">联调测试</td>
+<td style="text-align: left;">雨娃</td>
+<td style="text-align: left;">2026-05-21</td>
+</tr>
+<tr>
+<td style="text-align: left;">人类 review</td>
+<td style="text-align: left;">雅婷 / 雅怡</td>
+<td style="text-align: left;">2026-05-22</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>本文档基于雨娃 × Talus 深度讨论产出，等待团队确认后进入执行阶段。</em></p>
+<p><strong>文档状态</strong>：v0.1 草案 | 等待确认
+<strong>更新时间</strong>：2026-05-15 17:50 CST</p>
+    </div>
+    
+    <div class="footer">
+        <p>本文档基于雨娃 × Talus 深度讨论产出</p>
+        <p>等待团队确认后进入执行阶段</p>
+    </div>
+</body>
+</html>

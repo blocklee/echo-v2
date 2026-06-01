@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>后端部署指南 · 3种方式 · ECHO 模拟器 v4.0</title>
+<style>
+:root{--paper:#f5f3ef;--ink-dark:#2c3e3a;--ink-medium:#4A7C6F;--ink-light:#7a8b82;--vermilion:#c44536;--gold:#c4a35a;--border:#e5e1da;}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Noto Serif SC",Georgia,serif;background:var(--paper);color:var(--ink-dark);line-height:1.8;max-width:800px;margin:0 auto;padding:40px 20px}
+h1{font-size:26px;margin-bottom:8px}h2{font-size:20px;color:var(--ink-medium);margin:32px 0 16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+h3{font-size:16px;color:var(--vermilion);margin:20px 0 8px}
+.subtitle{color:var(--ink-light);font-size:14px;margin-bottom:24px}
+.method{background:#fff;border-radius:8px;padding:24px;margin:20px 0;border-left:4px solid var(--gold);box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.method-tag{display:inline-block;background:var(--ink-medium);color:#fff;padding:4px 12px;border-radius:4px;font-size:13px;margin-bottom:12px}
+.method-tag.recommended{background:var(--vermilion)}
+.code{background:#2c3e3a;color:#f5f3ef;padding:12px 16px;border-radius:6px;font-family:monospace;font-size:13px;overflow-x:auto;margin:12px 0;line-height:1.6}
+.code .comment{color:#7a8b82}
+.code .cmd{color:#c4a35a}
+.note{background:#fff8e1;padding:12px 16px;border-radius:6px;font-size:13px;color:#8d6e1f;margin:12px 0}
+.tip{background:#e8f5e9;padding:12px 16px;border-radius:6px;font-size:13px;color:#2e7d32;margin:12px 0}
+ul{margin:8px 0 8px 24px}li{margin:6px 0}
+.file-list{background:#f5f5f5;padding:12px 16px;border-radius:6px;font-family:monospace;font-size:13px;margin:12px 0}
+.footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--border);font-size:13px;color:var(--ink-light);text-align:center}
+</style>
+</head>
+<body>
+
+<h1>📦 后端部署指南</h1>
+<div class="subtitle">3种部署方式 · 选一种适合你的 · 5分钟搞定</div>
+
+<div class="note">
+<strong>部署包包含什么：</strong>
+<div class="file-list">
+echo_simulator_api_v2.py      ← API 入口 (8KB)
+echo_simulation_mesa_v2.py    ← Mesa 引擎 v4.0 (51KB)
+echo_contract_mock.py           ← 合约逻辑 (21KB)
+requirements.txt              ← 依赖清单
+Dockerfile                     ← Docker 配置 (可选)
+start.sh                       ← 一键启动脚本
+</div>
+</div>
+
+<h2>🎯 选一种方式</h2>
+
+<div class="method">
+<span class="method-tag recommended">⭐ 推荐 · 最简单</span>
+<h3>方式一：Docker 部署（一条命令）</h3>
+
+<p><strong>适合：</strong>有 Docker 的环境（云服务器、本地电脑）</p>
+<p><strong>优点：</strong>一条命令搞定所有依赖，环境隔离，不污染系统</p>
+
+<div class="code">
+<span class="comment"># 1. 进入模拟器目录</span>
+cd echo-v2/simulation
+
+<span class="comment"># 2. 构建镜像（首次约2-3分钟）</span>
+<span class="cmd">docker build -t echo-simulator .</span>
+
+<span class="comment"># 3. 启动容器</span>
+<span class="cmd">docker run -d -p 8000:8000 --name echo-api echo-simulator</span>
+
+<span class="comment"># 4. 检查状态</span>
+<span class="cmd">docker logs echo-api</span>
+</div>
+
+<div class="tip">
+✅ 完成后访问：http://你的服务器IP:8000/health
+<br>📖 API 文档：http://你的服务器IP:8000/docs
+</div>
+
+<p><strong>常用命令：</strong></p>
+<div class="code">
+<span class="comment"># 停止</span>
+docker stop echo-api
+
+<span class="comment"># 重启</span>
+docker start echo-api
+
+<span class="comment"># 删除容器</span>
+docker rm -f echo-api
+
+<span class="comment"># 查看日志</span>
+docker logs -f echo-api
+</div>
+</div>
+
+<div class="method">
+<span class="method-tag">方式二：Python 直接部署</span>
+<h3>Python 直接运行</h3>
+
+<p><strong>适合：</strong>不想用 Docker，服务器已有 Python 3.8+</p>
+
+<div class="code">
+<span class="comment"># 1. 进入目录</span>
+cd echo-v2/simulation
+
+<span class="comment"># 2. 安装依赖（首次）</span>
+<span class="cmd">pip3 install -r requirements.txt</span>
+
+<span class="comment"># 3. 启动（或运行 start.sh）</span>
+<span class="cmd">python3 echo_simulator_api_v2.py</span>
+</div>
+
+<div class="note">
+<strong>依赖清单：</strong>fastapi, uvicorn, pydantic, mesa, networkx, scipy, numpy
+<br>如果安装慢，可以用国内镜像：pip3 install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+</div>
+</div>
+
+<div class="method">
+<span class="method-tag">方式三：一键脚本（最懒）</span>
+<h3>运行 start.sh</h3>
+
+<p><strong>适合：</strong>Linux/Mac 环境，想偷懒</p>
+
+<div class="code">
+<span class="comment"># 给脚本执行权限（首次）</span>
+chmod +x start.sh
+
+<span class="comment"># 运行</span>
+<span class="cmd">./start.sh</span>
+</div>
+
+<div class="tip">
+脚本会自动检查 Python、安装依赖、启动服务，全程无脑。
+</div>
+</div>
+
+<h2>🔧 云服务器部署注意事项</h2>
+
+<div class="method">
+<h3>安全组/防火墙放行 8000 端口</h3>
+
+<p>大部分云服务器默认会<strong>阻止外部访问 8000 端口</strong>，需要手动放行。</p>
+
+<p><strong>阿里云/腾讯云/AWS/华为云：</strong></p>
+<ul>
+<li>登录云厂商控制台</li>
+<li>找到「安全组」或「防火墙」</li>
+<li>添加规则：入方向，TCP 8000 端口，来源 0.0.0.0/0</li>
+</ul>
+
+<p><strong>Linux 系统防火墙（ufw/iptables）：</strong></p>
+<div class="code">
+<span class="comment"># Ubuntu/Debian（ufw）</span>
+<span class="cmd">sudo ufw allow 8000/tcp</span>
+
+<span class="comment"># CentOS（firewalld）</span>
+<span class="cmd">sudo firewall-cmd --permanent --add-port=8000/tcp</span>
+<span class="cmd">sudo firewall-cmd --reload</span>
+</div>
+
+<div class="note">
+⚠️ <strong>关键点：</strong>即使代码运行正常，如果安全组没放行，外部也访问不了。
+<br>雨娃之前遇到的问题就是这个——VPS 本地运行正常，但外部连接超时。
+</div>
+</div>
+
+<h2>✅ 部署后验证</h2>
+
+<div class="method">
+<h3>检查是否成功</h3>
+
+<div class="code">
+<span class="comment"># 本地检查</span>
+curl http://localhost:8000/health
+
+<span class="comment"># 外部检查（替换为你的服务器IP）</span>
+curl http://你的服务器IP:8000/health
+</div>
+
+<p>成功返回：</p>
+<div class="code">
+{
+  "status": "ok",
+  "version": "4.0.0",
+  "engine": "Mesa v4.0",
+  "capabilities": ["single_run", "tournament", "ab_test", "robustness"]
+}
+</div>
+</div>
+
+<h2>📋 常见问题</h2>
+
+<div class="method">
+<p><strong>Q: pip install 很慢？</strong><br>
+A: 换国内镜像：<code>pip3 install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple</code></p>
+
+<p><strong>Q: 端口被占用？</strong><br>
+A: 修改 <code>echo_simulator_api_v2.py</code> 最后一行的 <code>port=8000</code> 改成别的，比如 <code>port=8080</code></p>
+
+<p><strong>Q: mesa 安装失败？</strong><br>
+A: Mesa 需要较新 Python（3.9+），如果系统 Python 太旧，用 Docker 方式最稳。</p>
+
+<p><strong>Q: 启动后无法从外部访问？</strong><br>
+A: 99% 是安全组/防火墙问题。检查云厂商控制台的安全组规则。</p>
+
+<p><strong>Q: 内存不足？</strong><br>
+A: 大规模模拟（100+ 用户）需要较多内存。小实验（6 创作者 × 20 用户）1GB 内存足够。</p>
+</div>
+
+<div class="footer">
+<p>🌱 ECHO Protocol · 万物有灵，皆可生长</p>
+<p style="margin-top:8px;font-size:12px;">部署问题随时找雨娃</p>
+</div>
+
+</body>
+</html>

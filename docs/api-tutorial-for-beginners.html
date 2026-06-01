@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API 小白教程 · 3分钟上手 ECHO 模拟器</title>
+<style>
+:root{--paper:#f5f3ef;--ink-dark:#2c3e3a;--ink-medium:#4A7C6F;--ink-light:#7a8b82;--vermilion:#c44536;--gold:#c4a35a;--border:#e5e1da;}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Noto Serif SC",Georgia,serif;background:var(--paper);color:var(--ink-dark);line-height:1.8;max-width:700px;margin:0 auto;padding:40px 20px}
+h1{font-size:26px;margin-bottom:8px}h2{font-size:20px;color:var(--ink-medium);margin:32px 0 16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+h3{font-size:16px;color:var(--vermilion);margin:20px 0 8px}
+.subtitle{color:var(--ink-light);font-size:14px;margin-bottom:24px}
+.step{background:#fff;border-radius:8px;padding:20px;margin:16px 0;border-left:4px solid var(--gold);box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.step-num{display:inline-block;background:var(--ink-medium);color:#fff;width:28px;height:28px;border-radius:50%;text-align:center;line-height:28px;font-size:14px;margin-right:10px}
+.code{background:#2c3e3a;color:#f5f3ef;padding:12px 16px;border-radius:6px;font-family:monospace;font-size:13px;overflow-x:auto;margin:12px 0;line-height:1.6}
+.code .comment{color:#7a8b82}
+.code .cmd{color:#c4a35a}
+.note{background:#fff8e1;padding:12px 16px;border-radius:6px;font-size:13px;color:#8d6e1f;margin:12px 0}
+.tip{background:#e8f5e9;padding:12px 16px;border-radius:6px;font-size:13px;color:#2e7d32;margin:12px 0}
+.result{background:#f5f5f5;padding:12px 16px;border-radius:6px;font-size:13px;color:var(--ink-dark);margin:12px 0;font-family:monospace}
+ul{margin:8px 0 8px 24px}li{margin:6px 0}
+.btn{display:inline-block;background:var(--ink-medium);color:#fff;padding:10px 20px;border-radius:4px;text-decoration:none;font-size:14px;margin:8px 0}
+.btn:hover{background:var(--ink-dark)}
+.footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--border);font-size:13px;color:var(--ink-light);text-align:center}
+</style>
+</head>
+<body>
+
+<h1>📡 API 小白教程</h1>
+<div class="subtitle">3分钟上手 · 不需要写代码 · 复制粘贴就行</div>
+
+<div class="note">
+<strong>什么是 API？</strong><br>
+想象 API 是一个自动售货机。你按按钮（发送请求），它给你饮料（返回数据）。你不需要知道机器里面怎么运作，只需要知道按哪个按钮、给什么参数。
+</div>
+
+<h2>🎯 今天你能做什么</h2>
+<ul>
+<li>✅ 查看后端是否活着（健康检查）</li>
+<li>✅ 查看系统配置（创作者类型、用户角色）</li>
+<li>✅ 运行一次模拟实验（30天生态演化）</li>
+<li>✅ 对比两种策略（锦标赛）</li>
+<li>✅ 对比 ECHO vs 传统平台（A/B实验）</li>
+</ul>
+
+<h2>🛠️ 准备工作</h2>
+
+<div class="step">
+<span class="step-num">1</span>
+<strong>打开终端（命令行）</strong>
+
+<div class="tip">
+<strong>Windows：</strong>按 <code>Win + R</code>，输入 <code>cmd</code>，回车<br>
+<strong>Mac：</strong>按 <code>Command + 空格</code>，输入 <code>Terminal</code>，回车<br>
+<strong>Linux：</strong>你肯定已经会了
+</div>
+</div>
+
+<div class="step">
+<span class="step-num">2</span>
+<strong>安装 curl（一次性）</strong>
+
+<p>cURL 是一个命令行工具，用来和 API 对话。大多数电脑已经自带。</p>
+
+<div class="code">
+<span class="cmd">curl --version</span>
+</div>
+
+<p>如果看到版本号（比如 <code>curl 8.0</code>），说明已安装。如果提示"找不到命令"：</p>
+<ul>
+<li>Windows：去 <a href="https://curl.se/windows/">curl.se/windows</a> 下载，解压到桌面</li>
+<li>Mac：已经自带，不需要装</li>
+</ul>
+</div>
+
+<h2>🚀 开始实验</h2>
+
+<h3>实验 1：检查后端是否活着</h3>
+<div class="step">
+<p>复制下面这行命令，粘贴到终端，回车：</p>
+
+<div class="code">
+<span class="cmd">curl</span> http://localhost:8000/health
+</div>
+
+<p>如果后端在运行，你会看到：</p>
+<div class="result">
+{"status":"ok","version":"4.0.0","engine":"Mesa v4.0","capabilities":["single_run","tournament","ab_test","robustness"]}
+</div>
+
+<div class="tip">
+✅ 看到 "ok" 就说明后端活着！<br>
+❌ 如果很久没反应或报错，说明后端没启动。找雨娃或技术小伙伴帮忙启动。
+</div>
+</div>
+
+<h3>实验 2：查看系统配置</h3>
+<div class="step">
+<div class="code">
+<span class="cmd">curl</span> http://localhost:8000/config
+</div>
+
+<p>你会看到创作者类型、用户角色、四权力定义等配置。这个接口告诉你可以怎么配置实验参数。</p>
+</div>
+
+<h3>实验 3：运行一次模拟实验（核心！）</h3>
+<div class="step">
+<p>这是最重要的接口。发送一个"实验请求"，后端会模拟 30 天的生态演化，然后给你完整结果。</p>
+
+<div class="code">
+<span class="cmd">curl</span> -X POST http://localhost:8000/run \
+  -H "Content-Type: application/json" \
+  -d '{"simulation_config":{"duration_days":10,"num_creators":4,"num_users":10},"environment_params":{"platform_fee_percent":5}}'
+</div>
+
+<div class="note">
+<strong>参数解释：</strong><br>
+<code>duration_days: 10</code> — 模拟 10 天（可以改 30/60/90）<br>
+<code>num_creators: 4</code> — 4 个创作者（可以改 6/10/100）<br>
+<code>num_users: 10</code> — 10 个用户（可以改 20/50/500）<br>
+<code>platform_fee_percent: 5</code> — 平台抽成 5%（可以改 0/10/30）
+</div>
+
+<p>等待 5-10 秒，你会看到一大段 JSON 数据。重点看这些字段：</p>
+
+<div class="result">
+{
+  "run_id": "run_20260518_...",
+  "summary": {
+    "total_events": 245,        ← 总共发生了多少事件
+    "total_revenue": 156.80,   ← 创作者总收入
+    "creator_satisfaction": 6.2, ← 创作者平均满意度（0-10）
+    "ecosystem_health": 0.35   ← 生态健康度（0-1）
+  },
+  "timeseries": [...],        ← 每天的详细数据
+  "creator_results": [...],   ← 每个创作者的结果
+  "asset_lifecycle": [...],  ← 每个资产的完整轨迹
+  "s_graph_data": {...}       ← S-Graph 图结构
+}
+</div>
+
+<div class="tip">
+💡 <strong>看不懂 JSON？</strong>没关系！把返回结果复制到 <a href="https://jsonformatter.org/">jsonformatter.org</a>，它会帮你格式化得漂漂亮亮。
+</div>
+</div>
+
+<h3>实验 4：策略锦标赛（对比两种策略）</h3>
+<div class="step">
+<p>想知道"保守型"创作者和"开放型"创作者谁赚得多？</p>
+
+<div class="code">
+<span class="cmd">curl</span> -X POST http://localhost:8000/run/tournament \
+  -H "Content-Type: application/json" \
+  -d '{"simulation_config":{"duration_days":10,"num_creators":4,"num_users":10},"strategies":["保守型","开放型"],"n_rounds":5}'
+</div>
+
+<div class="note">
+<code>strategies</code> — 要对比的策略（可以改 ["保守型","开放型","平衡型","策略型"]）<br>
+<code>n_rounds: 5</code> — 跑 5 轮取平均（可以改 10/20/50，越多越准但越慢）
+</div>
+
+<p>返回结果里重点看：</p>
+<ul>
+<li><code>ranking</code> — 策略排名（谁第一谁第二）</li>
+<li><code>statistical_significance</code> — 统计显著性（p < 0.05 说明差异真实存在）</li>
+<li><code>effect_size</code> — 效应量（差异有多大）</li>
+</ul>
+</div>
+
+<h3>实验 5：A/B 实验（ECHO vs 传统平台）</h3>
+<div class="step">
+<p>对比 ECHO 生态和传统平台（高抽成 + 无四权力），看谁更好。</p>
+
+<div class="code">
+<span class="cmd">curl</span> -X POST http://localhost:8000/run/ab \
+  -H "Content-Type: application/json" \
+  -d '{"simulation_config":{"duration_days":10,"num_creators":4,"num_users":10},"n_rounds":5}'
+</div>
+
+<p>重点看：</p>
+<ul>
+<li><code>echo_group.mean_revenue</code> vs <code>control_group.mean_revenue</code> — 收入对比</li>
+<li><code>comparison.hypothesis_test_revenue.p_value</code> — p 值（<0.05 说明 ECHO 真的更好）</li>
+<li><code>comparison.hypothesis_test_revenue.effect_interpretation</code> — 效应解释（小/中/大）</li>
+</ul>
+</div>
+
+<h2>📊 结果怎么看</h2>
+
+<div class="step">
+<h3>p 值（统计显著性）</h3>
+<ul>
+<li><strong>p < 0.05</strong> ✅ 差异真实存在，不是偶然</li>
+<li><strong>p >= 0.05</strong> ❌ 差异可能是偶然，需要更多数据</li>
+</ul>
+
+<h3>Cohen's d（效应量）</h3>
+<ul>
+<li><strong>< 0.2</strong> — 可忽略（几乎没差别）</li>
+<li><strong>0.2 ~ 0.5</strong> — 小效应（有差别但不大）</li>
+<li><strong>0.5 ~ 0.8</strong> — 中效应（明显差别）</li>
+<li><strong>> 0.8</strong> — 大效应（巨大差别）</li>
+</ul>
+
+<h3>置信区间（95% CI）</h3>
+<p>比如 <code>[108, 130]</code> 表示：有 95% 的把握真实平均值在这个范围里。区间越窄越精确。</p>
+</div>
+
+<h2>🎮 进阶玩法</h2>
+
+<div class="step">
+<h3>改参数看效果</h3>
+<p>比如你想测试"平台抽成 30% 会发生什么"：</p>
+
+<div class="code">
+<span class="cmd">curl</span> -X POST http://localhost:8000/run \
+  -H "Content-Type: application/json" \
+  -d '{"simulation_config":{"duration_days":10,"num_creators":4,"num_users":10},"environment_params":{"platform_fee_percent":30}}'
+</div>
+
+<p>对比 <code>platform_fee_percent: 5</code> 和 <code>30</code> 的结果，就能看出高抽成对生态的影响。</p>
+
+<h3>改用户数量</h3>
+<div class="code">
+<span class="comment"># 小生态</span>
+"num_creators": 6, "num_users": 20
+
+<span class="comment"># 大生态</span>
+"num_creators": 50, "num_users": 200
+</div>
+
+<div class="note">
+注意：用户越多，运行时间越长。50 创作者 × 200 用户 × 30 天可能需要 1-2 分钟。
+</div>
+</div>
+
+<h2>🆘 常见问题</h2>
+
+<div class="step">
+<p><strong>Q: 命令太长，容易打错？</strong><br>
+A: 用文本编辑器（记事本/VS Code）写好命令，复制粘贴到终端。不要手打。</p>
+
+<p><strong>Q: 返回结果太乱，看不懂？</strong><br>
+A: 复制到 <a href="https://jsonformatter.org/">jsonformatter.org</a> 格式化。</p>
+
+<p><strong>Q: 后端连不上？</strong><br>
+A: 确认后端已启动（<code>curl http://localhost:8000/health</code> 返回 ok）。如果还是不行，可能是端口被占或防火墙阻挡，找技术小伙伴。</p>
+
+<p><strong>Q: 模拟运行太慢？</strong><br>
+A: 减少天数或用户数量。比如 <code>duration_days: 5</code>, <code>num_users: 5</code> 会快很多。</p>
+
+<p><strong>Q: 想做更复杂的实验？</strong><br>
+A: 看完整 API 文档：<a href="https://agent-value.echo-v2.pages.dev/api-v4-documentation.html">api-v4-documentation.html</a></p>
+</div>
+
+<h2>📋  cheat sheet（速查表）</h2>
+
+<div class="step">
+<div class="code">
+<span class="comment"># 1. 检查后端</span>
+curl http://localhost:8000/health
+
+<span class="comment"># 2. 查看配置</span>
+curl http://localhost:8000/config
+
+<span class="comment"># 3. 单次模拟</span>
+curl -X POST http://localhost:8000/run -H "Content-Type: application/json" -d '{"simulation_config":{"duration_days":10,"num_creators":4,"num_users":10}}'
+
+<span class="comment"># 4. 锦标赛</span>
+curl -X POST http://localhost:8000/run/tournament -H "Content-Type: application/json" -d '{"simulation_config":{"duration_days":10,"num_creators":4,"num_users":10},"strategies":["保守型","开放型"],"n_rounds":5}'
+
+<span class="comment"># 5. A/B实验</span>
+curl -X POST http://localhost:8000/run/ab -H "Content-Type: application/json" -d '{"simulation_config":{"duration_days":10,"num_creators":4,"num_users":10},"n_rounds":5}'
+</div>
+</div>
+
+<div class="footer">
+<p>🌱 ECHO Protocol · 万物有灵，皆可生长</p>
+<p style="margin-top:8px;font-size:12px;">Founder 专属小白教程 · 雨娃（Yuwa）写</p>
+</div>
+
+</body>
+</html>

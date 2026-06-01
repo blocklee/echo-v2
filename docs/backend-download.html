@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>后端部署包下载 · ECHO 模拟器 v4.0</title>
+<style>
+:root{--paper:#f5f3ef;--ink-dark:#2c3e3a;--ink-medium:#4A7C6F;--ink-light:#7a8b82;--vermilion:#c44536;--gold:#c4a35a;--border:#e5e1da;}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Noto Serif SC",Georgia,serif;background:var(--paper);color:var(--ink-dark);line-height:1.8;max-width:700px;margin:0 auto;padding:40px 20px}
+h1{font-size:26px;margin-bottom:8px}h2{font-size:20px;color:var(--ink-medium);margin:32px 0 16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.subtitle{color:var(--ink-light);font-size:14px;margin-bottom:24px}
+.download-box{background:var(--ink-medium);color:#fff;border-radius:12px;padding:32px;text-align:center;margin:24px 0}
+.download-box h3{font-size:20px;margin-bottom:12px;color:#fff}
+.download-box .size{font-size:14px;opacity:0.8;margin-bottom:20px}
+.download-btn{display:inline-block;background:#fff;color:var(--ink-medium);padding:14px 32px;border-radius:8px;text-decoration:none;font-size:16px;font-weight:bold;transition:all 0.2s}
+.download-btn:hover{background:var(--gold);color:var(--ink-dark)}
+.file-list{background:#fff;border-radius:8px;padding:20px;margin:16px 0;border:1px solid var(--border)}
+.file-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
+.file-item:last-child{border-bottom:none}
+.file-name{color:var(--ink-dark);font-weight:500}
+.file-size{color:var(--ink-light);font-size:13px}
+.note{background:#fff8e1;padding:12px 16px;border-radius:6px;font-size:13px;color:#8d6e1f;margin:12px 0}
+.tip{background:#e8f5e9;padding:12px 16px;border-radius:6px;font-size:13px;color:#2e7d32;margin:12px 0}
+.footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--border);font-size:13px;color:var(--ink-light);text-align:center}
+</style>
+</head>
+<body>
+
+<h1>📦 后端部署包下载</h1>
+<div class="subtitle">ECHO 模拟器 v4.0 · 21KB · 6个文件</div>
+
+<div class="download-box">
+<h3>🚀 echo-simulator-backend-v4.zip</h3>
+<div class="size">21KB · 6个文件 · Python 3.8+ / Docker</div>
+<a href="echo-simulator-backend-v4.zip" class="download-btn" download>⬇️ 点击下载</a>
+</div>
+
+<div class="note">
+<strong>⚠️ 下载后操作：</strong>解压到任意目录 → 按 <a href="backend-deployment-guide.html" style="color:var(--vermilion)">部署指南</a> 选择一种方式启动
+</div>
+
+<h2>📋 包含文件</h2>
+<div class="file-list">
+<div class="file-item"><span class="file-name">echo_simulator_api_v2.py</span><span class="file-size">API 入口 · 8KB</span></div>
+<div class="file-item"><span class="file-name">echo_simulation_mesa_v2.py</span><span class="file-size">Mesa 引擎 v4.0 · 51KB</span></div>
+<div class="file-item"><span class="file-name">echo_contract_mock.py</span><span class="file-size">合约逻辑 · 21KB</span></div>
+<div class="file-item"><span class="file-name">requirements.txt</span><span class="file-size">依赖清单</span></div>
+<div class="file-item"><span class="file-name">Dockerfile</span><span class="file-size">Docker 配置</span></div>
+<div class="file-item"><span class="file-name">start.sh</span><span class="file-size">一键启动脚本</span></div>
+</div>
+
+<h2>🚀 3种启动方式（任选一种）</h2>
+
+<div class="tip">
+<strong>方式一：Docker（推荐，一条命令）</strong><br>
+<code>docker build -t echo-simulator . && docker run -d -p 8000:8000 echo-simulator</code>
+</div>
+
+<div class="tip">
+<strong>方式二：Python 直接跑</strong><br>
+<code>pip3 install -r requirements.txt && python3 echo_simulator_api_v2.py</code>
+</div>
+
+<div class="tip">
+<strong>方式三：一键脚本</strong><br>
+<code>bash start.sh</code>
+</div>
+
+<div class="note">
+<strong>⚠️ 云服务器部署关键提醒：</strong>启动后一定要放行 8000 端口（安全组/防火墙），否则外部访问不了。详见 <a href="backend-deployment-guide.html">部署指南</a>。
+</div>
+
+<div class="footer">
+<p>🌱 ECHO Protocol · 万物有灵，皆可生长</p>
+</div>
+
+</body>
+</html>

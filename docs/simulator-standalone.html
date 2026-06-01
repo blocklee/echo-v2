@@ -1,0 +1,2805 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECHO 模拟器 · 时间播放版</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        :root {
+            --paper: #f5f3ef;
+            --ink-dark: #2c3e3a;
+            --ink-medium: #4A7C6F;
+            --ink-light: #7a8b82;
+            --ink-faint: #a8b5ae;
+            --vermilion: #c44536;
+            --gold: #c4a35a;
+            --cell-bg: rgba(74,124,111,0.08);
+            --border-light: rgba(44,62,58,0.08);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+            background: var(--paper);
+            color: var(--ink-dark);
+            line-height: 1.5;
+            overflow-x: hidden;
+        }
+
+        /* ─── Header ─── */
+        .app-header {
+            background: linear-gradient(135deg, var(--ink-dark) 0%, var(--ink-medium) 100%);
+            color: white;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+        }
+        .app-header h1 {
+            font-size: 1.15rem;
+            font-weight: 400;
+            letter-spacing: 0.25em;
+        }
+
+        /* ─── Play Controls ─── */
+        .play-bar {
+            background: white;
+            padding: 12px 24px;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            position: sticky;
+            top: 56px;
+            z-index: 90;
+        }
+        .play-btn {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: var(--ink-medium);
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s;
+        }
+        .play-btn:hover { background: #3d6b5a; }
+        .play-btn:disabled { background: #ccc; cursor: not-allowed; }
+        .day-display {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--ink-medium);
+            font-variant-numeric: tabular-nums;
+            min-width: 80px;
+            text-align: center;
+        }
+        .day-display span { font-size: 0.75rem; color: var(--ink-faint); font-weight: 400; }
+        .timeline-slider {
+            flex: 1;
+            height: 6px;
+            -webkit-appearance: none;
+            background: rgba(44,62,58,0.12);
+            border-radius: 3px;
+            outline: none;
+        }
+        .timeline-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px; height: 16px;
+            border-radius: 50%;
+            background: var(--ink-medium);
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+        }
+        .timeline-slider::-moz-range-thumb {
+            width: 16px; height: 16px;
+            border-radius: 50%;
+            background: var(--ink-medium);
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+        }
+        .speed-btn {
+            padding: 4px 10px;
+            border: 1px solid var(--border-light);
+            border-radius: 4px;
+            background: white;
+            font-size: 0.75rem;
+            cursor: pointer;
+            color: var(--ink-light);
+        }
+        .speed-btn.active { background: var(--cell-bg); color: var(--ink-medium); border-color: var(--ink-medium); }
+
+        /* ─── Config ─── */
+        .config-bar {
+            background: white;
+            padding: 10px 24px;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .config-bar label {
+            font-size: 0.75rem;
+            color: var(--ink-light);
+        }
+        .config-bar input, .config-bar select {
+            padding: 4px 8px;
+            border: 1px solid var(--border-light);
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-family: inherit;
+            width: 60px;
+            background: var(--paper);
+        }
+        .config-bar select { width: auto; }
+        .btn {
+            padding: 6px 14px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+            letter-spacing: 0.05em;
+        }
+        .btn-primary {
+            background: var(--ink-medium);
+            color: white;
+        }
+        .btn-primary:hover { background: #3d6b5a; }
+        .btn-secondary {
+            background: rgba(44,62,58,0.08);
+            color: var(--ink-dark);
+        }
+        .btn-secondary:hover { background: rgba(44,62,58,0.15); }
+
+        /* ─── Main Grid ─── */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 300px 1fr 240px;
+            grid-template-rows: 1fr;
+            height: calc(100vh - 210px);
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .panel {
+            background: white;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .panel-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-light);
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--ink-medium);
+            letter-spacing: 0.1em;
+            background: rgba(74,124,111,0.04);
+            flex-shrink: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .panel-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        /* ─── Events Panel ─── */
+        .event-filters {
+            display: flex;
+            gap: 4px;
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border-light);
+            flex-wrap: wrap;
+        }
+        .filter-pill {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.15s;
+            user-select: none;
+        }
+        .filter-pill.all { background: var(--ink-dark); color: white; }
+        .filter-pill:not(.all) { background: rgba(44,62,58,0.06); color: var(--ink-light); }
+        .filter-pill.active:not(.all) { background: var(--cell-bg); color: var(--ink-medium); border-color: var(--ink-medium); }
+        .filter-pill:hover { opacity: 0.8; }
+        .filter-pill .count {
+            font-size: 0.65rem;
+            opacity: 0.7;
+            margin-left: 2px;
+        }
+
+        .event-list {
+            padding: 0;
+        }
+        .event-item {
+            padding: 8px 12px;
+            border-bottom: 1px solid rgba(44,62,58,0.04);
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: background 0.1s;
+            animation: fadeIn 0.2s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-8px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .event-item:hover { background: rgba(74,124,111,0.04); }
+        .event-tag {
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-size: 0.65rem;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .tag-browse { background: #e8f5e9; color: #2e7d32; }
+        .tag-cite { background: #e3f2fd; color: #1565c0; }
+        .tag-cite_free { background: #eceff1; color: #90a4ae; }
+        .tag-remix { background: #fff3e0; color: #e65100; }
+        .tag-remix_direct { background: #ffe0b2; color: #ff8a65; }
+        .tag-remix_approved { background: #e8f5e9; color: #66bb6a; }
+        .tag-remix_rejected { background: #ffebee; color: #ef5350; }
+        .tag-pay { background: #f3e5f5; color: #6a1b9a; }
+        .tag-spread { background: #e0f2f1; color: #00695c; }
+        .tag-dispute { background: #ffebee; color: #c62828; }
+        .tag-config { background: #f5f5f5; color: #616161; }
+        .tag-config_change { background: #f5f5f5; color: #616161; }
+        .tag-rest { background: #f0f0f0; color: #a0b0a8; }
+        .tag-reject { background: #ffebee; color: #c44536; }
+        .tag-create { background: #f5f3ef; color: #7a8b82; border: 1px solid #d0ccc5; }
+        .tag-create::before { content: '✨ '; }
+        .tag-ad_revenue { background: #fffde7; color: #f9a825; }
+        .event-actor {
+            color: var(--ink-light);
+            font-size: 0.75rem;
+        }
+        .event-arrow {
+            color: var(--ink-faint);
+            font-size: 0.7rem;
+        }
+        .event-amount {
+            color: var(--ink-medium);
+            font-weight: 500;
+            font-size: 0.75rem;
+            margin-left: auto;
+            font-variant-numeric: tabular-nums;
+        }
+        .events-empty {
+            padding: 24px;
+            text-align: center;
+            color: var(--ink-faint);
+            font-size: 0.8rem;
+        }
+        .day-summary {
+            padding: 8px 12px;
+            background: rgba(74,124,111,0.04);
+            font-size: 0.75rem;
+            color: var(--ink-light);
+            border-bottom: 1px solid var(--border-light);
+        }
+        .day-summary strong {
+            color: var(--ink-medium);
+            font-weight: 500;
+        }
+
+        /* ─── Network Panel ─── */
+        #network-viz {
+            flex: 1;
+            min-height: 0;
+            background: #faf9f7;
+            position: relative;
+        }
+        .net-tooltip {
+            position: absolute;
+            background: rgba(44,62,58,0.92);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            pointer-events: none;
+            z-index: 50;
+            max-width: 200px;
+            line-height: 1.4;
+        }
+
+        /* ─── Rank Panel ─── */
+        .rank-list {
+            padding: 0;
+        }
+        .rank-row {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border-light);
+            gap: 8px;
+        }
+        .rank-idx {
+            width: 20px;
+            text-align: center;
+            font-size: 0.7rem;
+            color: var(--ink-faint);
+            font-variant-numeric: tabular-nums;
+        }
+        .rank-idx.top {
+            width: 22px;
+            height: 22px;
+            line-height: 22px;
+            border-radius: 50%;
+            background: var(--gold);
+            color: white;
+            font-weight: 600;
+        }
+        .rank-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .rank-info { flex: 1; min-width: 0; }
+        .rank-name {
+            font-size: 0.8rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .rank-meta {
+            font-size: 0.7rem;
+            color: var(--ink-faint);
+        }
+        .rank-value {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--ink-medium);
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ─── Metrics Float ─── */
+        .metrics-float {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(8px);
+            border-radius: 10px;
+            padding: 10px 14px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 16px;
+            z-index: 20;
+        }
+        .metric-chip {
+            text-align: center;
+        }
+        .metric-chip .val {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--ink-medium);
+            font-variant-numeric: tabular-nums;
+        }
+        .metric-chip .lbl {
+            font-size: 0.65rem;
+            color: var(--ink-faint);
+        }
+
+        /* ─── Bottom Charts ─── */
+        .bottom-charts {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1px;
+            background: var(--border-light);
+            border-top: 1px solid var(--border-light);
+            height: 200px;
+            flex-shrink: 0;
+        }
+        .chart-panel {
+            background: white;
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+        }
+        .chart-title {
+            font-size: 0.75rem;
+            color: var(--ink-light);
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+            flex-shrink: 0;
+        }
+        .chart-area {
+            flex: 1;
+            min-height: 0;
+        }
+
+        /* ─── Loading Overlay ─── */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(245,243,239,0.85);
+            backdrop-filter: blur(4px);
+            z-index: 300;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .loading-overlay.active { display: flex; }
+        .loading-spinner {
+            width: 48px; height: 48px;
+            border: 3px solid rgba(74,124,111,0.15);
+            border-top-color: var(--ink-medium);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text {
+            font-size: 0.9rem;
+            color: var(--ink-medium);
+            letter-spacing: 0.1em;
+        }
+        .loading-sub {
+            font-size: 0.75rem;
+            color: var(--ink-faint);
+        }
+        .progress-bar {
+            width: 200px;
+            height: 4px;
+            background: rgba(74,124,111,0.12);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--ink-medium);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        /* ─── Toast Notification ─── */
+        .toast {
+            position: fixed;
+            top: 72px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: var(--ink-dark);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            z-index: 400;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        .toast.warn { background: var(--vermilion); }
+        .toast.info { background: var(--ink-medium); }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(44,62,58,0.2); border-radius: 2px; }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 1200px) {
+            .main-grid { grid-template-columns: 260px 1fr 200px; }
+        }
+        @media (max-width: 900px) {
+            .main-grid { grid-template-columns: 1fr; grid-template-rows: auto auto auto; height: auto; }
+            .bottom-charts { grid-template-columns: 1fr; height: auto; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text" id="loading-text">计算中...</div>
+        <div class="loading-sub" id="loading-sub">ECHO 后端引擎</div>
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Header -->
+    <header class="app-header">
+        <h1>ECHO 模拟器</h1>
+        <div style="font-size:0.8rem;opacity:0.7;">时间播放版 · 拖动滑块看每一天</div>
+    </header>
+
+    <!-- Play Controls -->
+    <div class="play-bar">
+        <button class="play-btn" id="btn-prev" title="上一天">◀</button>
+        <button class="play-btn" id="btn-play" title="播放/暂停">▶</button>
+        <button class="play-btn" id="btn-next" title="下一天">▶</button>
+        <div class="day-display">
+            <span>第</span><div id="current-day">1</div><span>天</span>
+        </div>
+        <input type="range" class="timeline-slider" id="day-slider" min="1" max="30" value="1">
+        <div style="font-size:0.75rem;color:var(--ink-faint);min-width:40px;text-align:right;" id="total-days">/ 30</div>
+        <div style="display:flex;gap:4px;margin-left:8px;">
+            <button class="speed-btn active" data-speed="800" title="慢速">慢</button>
+            <button class="speed-btn" data-speed="400" title="中速">中</button>
+            <button class="speed-btn" data-speed="200" title="快速">快</button>
+        </div>
+    </div>
+
+    <!-- Config -->
+    <div class="config-bar">
+        <div><label>创作者</label><input type="number" id="cfg-creators" value="6" min="2" max="20"></div>
+        <div><label>使用者</label><input type="number" id="cfg-users" value="20" min="5" max="100"></div>
+        <div><label>天数</label><input type="number" id="cfg-days" value="30" min="7" max="90"></div>
+        <div><label>策略</label>
+            <select id="cfg-strategy">
+                <option value="open">开放型</option>
+                <option value="balanced" selected>平衡型</option>
+                <option value="conservative">保守型</option>
+                <option value="strategic">策略型</option>
+            </select>
+        </div>
+        <div><label>Seed</label><input type="number" id="cfg-seed" value="42"></div>
+        <button class="btn btn-primary" id="btn-run" onclick="runSimulation()">▶ 运行模拟</button>
+        <button class="btn btn-secondary" id="btn-tournament" onclick="runTournament()">🏆 锦标赛</button>
+        <button class="btn btn-secondary" id="btn-ab" onclick="runABTest()">🔬 A/B实验</button>
+    </div>
+
+    <!-- Custom Creators (collapsible) -->
+    <div style="background:white;border-bottom:1px solid var(--border-light);">
+        <button id="btn-toggle-custom" style="width:100%;padding:10px 24px;border:none;background:none;text-align:left;font-size:0.8rem;color:var(--ink-medium);cursor:pointer;display:flex;align-items:center;gap:6px;">
+            <span id="custom-chevron">▶</span> ⚙️ 自定义创作者（逐个设置名字、领域、策略）
+        </button>
+        <div id="custom-creators-panel" style="display:none;padding:0 24px 16px;">
+            <div style="font-size:0.7rem;color:var(--ink-faint);margin-bottom:8px;">行数根据上方「创作者」数量自动生成。留空则使用默认。策略字段：yong=引用许可, kuo=扩展, yan=改编限制, yi=收益分配</div>
+            <div id="custom-creators-table" style="max-height:200px;overflow-y:auto;border:1px solid var(--border-light);border-radius:6px;">
+                <!-- dynamically generated -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Main -->
+    <div class="main-grid">
+        <!-- Events -->
+        <div class="panel" style="border-right:1px solid var(--border-light);">
+            <div class="panel-header">
+                <span>当天事件</span>
+                <span id="events-count" style="font-size:0.75rem;color:var(--ink-faint);">0 个</span>
+            </div>
+            <div class="event-filters" id="event-filters">
+                <span class="filter-pill all active" data-filter="all">全部</span>
+                <span class="filter-pill" data-filter="browse">浏览</span>
+                <span class="filter-pill" data-filter="cite">引用</span>
+                <span class="filter-pill" data-filter="remix">改编</span>
+                <span class="filter-pill" data-filter="pay">付费</span>
+                <span class="filter-pill" data-filter="spread">传播</span>
+                <span class="filter-pill" data-filter="dispute">争议</span>
+                <span class="filter-pill" data-filter="rest">休息</span>
+                <span class="filter-pill" data-filter="reject">被拒</span>
+                <span class="filter-pill" data-filter="create">创作</span>
+            </div>
+            <div class="panel-body" id="events-body">
+                <div class="events-empty">点击「运行模拟」开始</div>
+            </div>
+        </div>
+
+        <!-- Network -->
+        <div class="panel">
+            <div class="panel-header">网络关系</div>
+            <div id="network-viz">
+                <div class="metrics-float" id="metrics-float">
+                    <div class="metric-chip"><div class="val" id="m-events">0</div><div class="lbl">累计事件</div></div>
+                    <div class="metric-chip"><div class="val" id="m-revenue">0</div><div class="lbl">累计收入</div></div>
+                    <div class="metric-chip"><div class="val" id="m-density">0</div><div class="lbl">网络密度</div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rankings -->
+        <div class="panel" style="border-left:1px solid var(--border-light);display:flex;flex-direction:column;">
+            <div class="panel-header">创作者排名</div>
+            <div class="panel-body" id="rank-body" style="flex:1;min-height:0;overflow-y:auto;">
+                <div class="events-empty">等待运行...</div>
+            </div>
+            
+            <div style="border-top:1px solid var(--border-light);flex-shrink:0;">
+                <div class="panel-header" style="padding:8px 12px;font-size:0.75rem;">使用者状态</div>
+                <div class="panel-body" id="user-body" style="max-height:220px;overflow-y:auto;padding:0;">
+                    <div class="events-empty" style="padding:12px;">等待运行...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Charts -->
+    <div class="bottom-charts">
+        <div class="chart-panel">
+            <div class="chart-title">每日事件统计（累计）</div>
+            <div class="chart-area" id="daily-chart"></div>
+        </div>
+        <div class="chart-panel">
+            <div class="chart-title">势位变化趋势</div>
+            <div class="chart-area" id="trend-chart"></div>
+        </div>
+    </div>
+
+    <!-- Experiment Panel -->
+    <div id="exp-panel" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:24px;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,0.2);max-width:600px;width:90%;max-height:80vh;overflow-y:auto;z-index:200;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 id="exp-title" style="font-size:1rem;color:var(--ink-medium);"></h3>
+            <button onclick="closeExpPanel()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--ink-light);">×</button>
+        </div>
+        <div id="exp-content"></div>
+    </div>
+    <div id="exp-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:199;" onclick="closeExpPanel()"></div>
+
+    <script>
+/**
+ * ECHO Simulator - Pure JavaScript Version
+ * Mesa-free implementation of the ECHO Chamber simulation engine
+ */
+
+// ==================== 随机数生成器（可复现 seed）====================
+class SeededRandom {
+    constructor(seed) {
+        this.seed = seed || Math.floor(Math.random() * 2147483647);
+        this.originalSeed = this.seed;
+    }
+    
+    // 线性同余生成器（与 Python random 兼容）
+    next() {
+        this.seed = (this.seed * 16807 + 0) % 2147483647;
+        return (this.seed - 1) / 2147483646;
+    }
+    
+    random() {
+        return this.next();
+    }
+    
+    randint(min, max) {
+        return Math.floor(this.random() * (max - min + 1)) + min;
+    }
+    
+    choice(array) {
+        return array[this.randint(0, array.length - 1)];
+    }
+    
+    shuffle(array) {
+        const arr = [...array];
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = this.randint(0, i);
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+    
+    gauss(mu, sigma) {
+        // Box-Muller 变换
+        let u = 0, v = 0;
+        while (u === 0) u = this.random();
+        while (v === 0) v = this.random();
+        const z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+        return mu + z * sigma;
+    }
+}
+
+// ==================== 事件 ====================
+class Event {
+    constructor(day, eventType, fromId, toId, amount = 0, details = {}) {
+        this.day = day;
+        this.type = eventType;
+        this.from = fromId;
+        this.to = toId;
+        this.amount = amount;
+        this.details = details;
+    }
+}
+
+// ==================== 资产（创作者）====================
+class Asset {
+    constructor(id, name, config, domain, creatorType) {
+        this.id = id;
+        this.name = name;
+        this.config = config;
+        this.domain = domain;
+        this.creatorType = creatorType;
+        
+        this.shiLevel = 0;
+        this.shiHistory = [];
+        this.revenue = 0;
+        this.satisfaction = 5.0;
+        this.platforms = new Set();
+        this.relationships = [];
+        this.eventCounts = { browse: 0, cite: 0, remix: 0, pay: 0, spread: 0, dispute: 0 };
+        this.createdDay = 0; // 资产创建日，用于冷启动
+    }
+    
+    updateSatisfaction(delta) {
+        this.satisfaction = Math.max(1, Math.min(10, this.satisfaction + delta));
+    }
+}
+
+// ==================== 使用者（用户）—— 智能体版本 v2.0 ====================
+class User {
+    constructor(id, name, userType, domain, personality = null, budget = 100) {
+        this.id = id;
+        this.name = name;
+        this.userType = userType;
+        this.domain = domain;
+        this.wallet = budget;
+        this.active = true;
+        this.mood = 0.5; // -1.0 ~ +1.0
+        
+        // 探索概率：普通用户 20%，种子用户 50%
+        this.exploreRate = 0.2;
+        
+        // 大五人格（默认值基于角色类型）
+        this.personality = personality || this.defaultPersonality(userType);
+        
+        // 记忆系统 v2.0
+        this.memory = {
+            eventLog: [],          // 所有行为记录 [{day, action, assetId, success, amount}]
+            incomeHistory: [],     // 收入记录
+            spendingLog: [],       // 支出记录
+            moodHistory: [],       // 情绪轨迹
+            assetTrust: {},        // 对各资产的信任度 {assetId: 0.75}
+            assetLastView: {},     // 上次查看天数 {assetId: day}
+            assetInteractions: {}, // 交互次数 {assetId: count}
+            consecutiveRejections: 0,
+            totalRejections: 0,
+        };
+        
+        this.perception = null;    // 本次感知结果缓存
+        this.intention = null;     // 本次决策缓存
+    }
+    
+    defaultPersonality(userType) {
+        const defaults = {
+            browser:    { openness: 0.5, conscientiousness: 0.5, extraversion: 0.5, agreeableness: 0.7, neuroticism: 0.3 },
+            citer:      { openness: 0.6, conscientiousness: 0.7, extraversion: 0.5, agreeableness: 0.8, neuroticism: 0.3 },
+            remixer:    { openness: 0.9, conscientiousness: 0.4, extraversion: 0.4, agreeableness: 0.5, neuroticism: 0.4 },
+            spreader:   { openness: 0.7, conscientiousness: 0.5, extraversion: 0.9, agreeableness: 0.8, neuroticism: 0.2 },
+            payer:      { openness: 0.5, conscientiousness: 0.6, extraversion: 0.5, agreeableness: 0.9, neuroticism: 0.2 },
+            disputer:   { openness: 0.4, conscientiousness: 0.2, extraversion: 0.3, agreeableness: 0.2, neuroticism: 0.8 },
+        };
+        return defaults[userType] || defaults.browser;
+    }
+    
+    // ─── 1. 感知：扫描资产，计算评分 ───
+    perceive(assets, day) {
+        const perceptions = [];
+        
+        // ═══ 发现轮播：30%概率进入"发现模式" ═══
+        // 发现模式下：从未交互的资产获得额外排序加成
+        const discoveryMode = Math.random() < 0.3;
+        
+        for (const asset of assets) {
+            // 相关性：同领域 1.0，不同领域 0.3
+            const relevance = (asset.domain === this.domain) ? 1.0 : 0.3;
+            
+            // 信任度：交互越多越信任
+            const interactions = this.memory.assetInteractions[asset.id] || 0;
+            const trust = 1.0 - (1.0 / (1 + interactions));
+            
+            // 新鲜度：多久没看（7天衰减）
+            const lastView = this.memory.assetLastView[asset.id] || 0;
+            const daysSince = day - lastView;
+            const freshness = 1.0 - Math.min(1.0, daysSince / 7);
+            
+            // 动态新奇奖励：与资产整体热度反向——越冷门奖励越高
+            const globalEvents = Object.values(asset.eventCounts).reduce((s, c) => s + c, 0);
+            // 冷门资产（<10次交互）最高奖0.25，热门资产（>50次）奖0.05
+            const noveltyBonus = globalEvents < 10 ? 0.25 : globalEvents < 50 ? 0.15 : 0.05;
+            
+            // 人工推荐位：新资产前5次交互有额外展示加分（模拟平台推荐）
+            const featuredBonus = globalEvents < 5 ? 0.2 : 0;
+            
+            // 疲劳度：同一资产交互太多会疲劳
+            // 基础疲劳 + 连续交互惩罚
+            const baseFatigue = Math.min(1.0, interactions / 10) * 0.5;
+            const recentSameAsset = this.memory.eventLog.slice(-3).every(e => e.assetId === asset.id);
+            const consecutivePenalty = recentSameAsset ? 0.3 : 0;
+            const fatigue = Math.min(0.9, baseFatigue + consecutivePenalty);
+            
+            // 价格合理性（用户视角）
+            const priceScore = this.evaluatePrice(asset);
+            
+            // 社交影响——在发现模式下降低权重（避免马太效应）
+            const socialScore = discoveryMode 
+                ? Math.min(1.0, (asset.relationships?.length || 0) / 5) * 0.3  // 发现模式：社交分打折
+                : Math.min(1.0, (asset.relationships?.length || 0) / 5);
+            
+            // 信任度权重动态调整：发现模式下降低信任权重
+            const trustWeight = discoveryMode ? 0.15 : 0.25;
+            const freshnessWeight = discoveryMode ? 0.35 : 0.2;  // 发现模式更重视新鲜度
+            
+            // 综合评分
+            let score = (
+                relevance * 0.3 +
+                trust * trustWeight +
+                freshness * freshnessWeight +
+                priceScore * 0.15 +
+                socialScore * 0.1 +
+                noveltyBonus +
+                featuredBonus
+            ) * (1.0 - fatigue);
+            
+            // 发现模式：从未交互过的资产额外 +0.2（强制推新）
+            if (discoveryMode && interactions === 0) {
+                score += 0.2;
+            }
+
+            perceptions.push({
+                asset: asset,
+                score: score,
+                relevance: relevance,
+                trust: trust,
+                freshness: freshness,
+                fatigue: fatigue,
+                priceScore: priceScore,
+                socialScore: socialScore,
+                discoveryMode: discoveryMode,
+            });
+        }
+        
+        // 按评分排序
+        perceptions.sort((a, b) => b.score - a.score);
+        this.perception = perceptions;
+        return perceptions;
+    }
+    
+    evaluatePrice(asset) {
+        // 价格合理性：用户越 agreeable 越不在乎价格
+        const prices = { browse: 0, cite: 1.5, remix: 3.0, pay: 5.0, spread: 0, dispute: 0 };
+        const maxPrice = Object.values(prices).reduce((a, b) => Math.max(a, b), 0);
+        // agreeableness 高 → 更能接受高价
+        const threshold = 2.0 + (this.personality.agreeableness * 5.0); // 2~7
+        const avgPrice = Object.values(prices).reduce((s, p) => s + p, 0) / Object.values(prices).length;
+        // 价格越低越好，但也要看用户性格
+        return Math.max(0, 1.0 - (avgPrice / threshold));
+    }
+    
+    // ─── 2. 决策：根据感知决定行动 ───
+    evaluate(day, model) {
+        // 如果连续被拒3次以上 + 情绪低落 → 休息
+        if (this.memory.consecutiveRejections >= 3 && this.mood < -0.3) {
+            return { action: 'rest', asset: null, reason: '连续被拒，情绪低落，休息一下' };
+        }
+        
+        // 如果钱包空了 → 只能浏览
+        if (this.wallet < 1.0) {
+            return { action: 'browse', asset: this.pickTopAsset(), reason: '钱包不足，只能浏览' };
+        }
+        
+        // ═══ 创作冲动：用户可能变成创作者 ═══
+        // 条件：有使用经验(≥3次)、情绪好、有钱、有开放性
+        const totalInteractions = this.memory.eventLog.length;
+        const canCreate = totalInteractions >= 3 && this.mood > 0 && this.wallet >= 5 && this.personality.openness > 0.3;
+        if (canCreate) {
+            const createProb = 0.05 + this.personality.openness * 0.15 + this.mood * 0.10;
+            if (Math.random() < createProb) {
+                // 选最近交互最多的资产作为灵感来源
+                const interactedAssets = Object.entries(this.memory.assetInteractions)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 3);
+                if (interactedAssets.length > 0) {
+                    const sourceId = interactedAssets[0][0];
+                    const sourceAsset = model.assets.find(a => a.id === sourceId);
+                    if (sourceAsset) {
+                        return {
+                            action: 'create',
+                            asset: sourceAsset,
+                            reason: `受「${sourceAsset.name}」启发，决定创作自己的资产`
+                        };
+                    }
+                }
+            }
+        }
+        
+        // 按角色类型决策
+        return this.roleBasedDecision(day, model);
+    }
+    
+    pickTopAsset() {
+        if (!this.perception || this.perception.length === 0) return null;
+        
+        // 按用户 exploreRate 概率随机探索（种子用户 50%，普通 20%）
+        if (Math.random() < this.exploreRate) {
+            const randomIdx = Math.floor(Math.random() * this.perception.length);
+            return this.perception[randomIdx].asset;
+        }
+        
+        return this.perception[0].asset;
+    }
+    
+    roleBasedDecision(day, model) {
+        const topAssets = this.perception || [];
+        
+        switch (this.userType) {
+            case 'citer':
+                return this.decideCiter(topAssets, day);
+            case 'remixer':
+                return this.decideRemixer(topAssets, day);
+            case 'payer':
+                return this.decidePayer(topAssets, day);
+            case 'spreader':
+                return this.decideSpreader(topAssets, day);
+            case 'disputer':
+                return this.decideDisputer(topAssets, day);
+            case 'browser':
+            default:
+                return this.decideBrowser(topAssets, day);
+        }
+    }
+    
+    // 浏览者：80%浏览，偶尔引用
+    decideBrowser(topAssets, day) {
+        if (topAssets.length === 0) return { action: 'rest', asset: null, reason: '没有感兴趣的资产' };
+        
+        // 30%概率休息
+        if (Math.random() < 0.3) return { action: 'rest', asset: null, reason: '今天想休息' };
+        
+        // 对信任度高的资产偶尔引用
+        const top = topAssets[0];
+        if (top.trust > 0.5 && top.asset.config.yong === 1 && this.wallet > 2) {
+            if (Math.random() < 0.2) return { action: 'cite', asset: top.asset, reason: '信任度高，尝试引用' };
+        }
+        
+        return { action: 'browse', asset: top.asset, reason: '浏览感兴趣的内容' };
+    }
+    
+    // 引用者：优先引用信任度高且开放的资产
+    decideCiter(topAssets, day) {
+        if (topAssets.length === 0) return { action: 'rest', asset: null, reason: '没有可引用的资产' };
+        
+        // 找到 yong=1 且信任度>0.3 的资产
+        for (const p of topAssets) {
+            if (p.asset.config.yong === 1 && p.trust > 0.3 && this.wallet > 2) {
+                return { action: 'cite', asset: p.asset, reason: '信任度高，引用学习' };
+            }
+        }
+        
+        // 对kuo≥3的开放资产也引用
+        for (const p of topAssets) {
+            if (p.asset.config.kuo >= 3 && this.wallet > 2) {
+                return { action: 'cite', asset: p.asset, reason: '开放资产，值得引用' };
+            }
+        }
+        
+        return { action: 'browse', asset: topAssets[0]?.asset, reason: '没找到合适的引用对象' };
+    }
+    
+    // 改编者：优先改编信任度高且限制少的资产
+    decideRemixer(topAssets, day) {
+        if (topAssets.length === 0) return { action: 'rest', asset: null, reason: '没有可改编的资产' };
+        
+        // 高开放度 → 优先改编（需要 yan=0）
+        if (this.personality.openness > 0.7) {
+            for (const p of topAssets) {
+                if (p.asset.config.yan === 0 && p.trust > 0.3 && this.wallet > 3) {
+                    if (Math.random() < 0.6) {
+                        return { action: 'remix', asset: p.asset, reason: '开放度高，尝试改编' };
+                    }
+                }
+            }
+        }
+        
+        // 先建立引用关系，为后续改编铺路
+        for (const p of topAssets) {
+            if (p.asset.config.yong === 1 && p.trust > 0.2 && this.wallet > 2) {
+                if (Math.random() < 0.5) {
+                    return { action: 'cite', asset: p.asset, reason: '先引用建立关系' };
+                }
+            }
+        }
+        
+        return { action: 'browse', asset: topAssets[0]?.asset, reason: '寻找改编灵感' };
+    }
+    
+    // 付费者：对喜欢的资产慷慨付费
+    decidePayer(topAssets, day) {
+        if (topAssets.length === 0) return { action: 'rest', asset: null, reason: '没有感兴趣的资产' };
+        
+        const top = topAssets[0];
+        
+        // 对信任度>0.4的资产付费
+        if (top.trust > 0.4 && this.wallet > 5) {
+            return { action: 'pay', asset: top.asset, reason: '信任创作者，付费支持' };
+        }
+        
+        // 高 agreeableness → 对新资产也尝试付费
+        if (this.personality.agreeableness > 0.8 && this.wallet > 5) {
+            return { action: 'pay', asset: top.asset, reason: '支持创作者生态' };
+        }
+        
+        return { action: 'browse', asset: top.asset, reason: '考虑是否付费' };
+    }
+    
+    // 传播者：优先传播有关系的资产
+    decideSpreader(topAssets, day) {
+        if (topAssets.length === 0) return { action: 'rest', asset: null, reason: '没有可传播的资产' };
+        
+        // 优先传播已有引用/付费关系的资产
+        for (const p of topAssets) {
+            const hasRelation = this.memory.assetInteractions[p.asset.id] > 0;
+            if (hasRelation) {
+                return { action: 'spread', asset: p.asset, reason: '好内容，分享给更多人' };
+            }
+        }
+        
+        // 对新资产也有传播欲望
+        if (Math.random() < 0.3) {
+            return { action: 'spread', asset: topAssets[0].asset, reason: '发现好内容' };
+        }
+        
+        return { action: 'browse', asset: topAssets[0].asset, reason: '寻找可传播的内容' };
+    }
+    
+    // 争议者：挑战严格资产，试探边界
+    decideDisputer(topAssets, day) {
+        if (topAssets.length === 0) return { action: 'rest', asset: null, reason: '没有目标资产' };
+        
+        // 连续被拒3次以上 + 情绪崩溃 → 愤怒改编（挑战最严格资产）
+        if (this.memory.consecutiveRejections >= 3 && this.mood < -0.5) {
+            // 找最严格的资产（yan最高）硬试
+            const strictAssets = topAssets.filter(p => p.asset.config.yan >= 2);
+            if (strictAssets.length > 0) {
+                return { action: 'remix', asset: strictAssets[0].asset, reason: '愤怒改编，挑战严格限制' };
+            }
+        }
+        
+        // 优先锁定 yan=2 资产，引用建立关系（为后续 remix 铺路）
+        for (const p of topAssets) {
+            if (p.asset.config.yan >= 2 && p.asset.config.yong === 1) {
+                if (Math.random() < 0.4) {
+                    return { action: 'cite', asset: p.asset, reason: '锁定严格资产，建立关系' };
+                }
+            }
+        }
+        
+        // 对 kuos≥3 的开放资产引用（白嫖建关系）
+        for (const p of topAssets) {
+            if (p.asset.config.kuo >= 3) {
+                if (Math.random() < 0.3) {
+                    return { action: 'cite', asset: p.asset, reason: '开放资产，先引用再说' };
+                }
+            }
+        }
+        
+        // 随机硬试严格资产
+        for (const p of topAssets) {
+            if (p.asset.config.yan <= 1 && Math.random() < 0.2) {
+                return { action: 'remix', asset: p.asset, reason: '试探边界' };
+            }
+        }
+        
+        return { action: 'browse', asset: topAssets[0]?.asset, reason: '观察环境' };
+    }
+    
+    // ─── 3. 学习：根据执行结果更新记忆和情绪 ───
+    learn(action, asset, success, amount, day) {
+        // 记录事件
+        this.memory.eventLog.push({
+            day: day,
+            action: action,
+            assetId: asset?.id,
+            success: success,
+            amount: amount || 0,
+        });
+        
+        // 更新资产信任度
+        if (asset) {
+            const currentTrust = this.memory.assetTrust[asset.id] || 0;
+            const delta = success ? 0.15 : -0.2;
+            this.memory.assetTrust[asset.id] = Math.max(0, Math.min(1.0, currentTrust + delta));
+            
+            // 更新交互次数
+            this.memory.assetInteractions[asset.id] = (this.memory.assetInteractions[asset.id] || 0) + 1;
+            this.memory.assetLastView[asset.id] = day;
+        }
+        
+        // 情绪更新
+        if (success) {
+            this.mood = Math.min(1.0, this.mood + 0.1);
+            this.memory.consecutiveRejections = 0;
+        } else {
+            this.mood = Math.max(-1.0, this.mood - 0.2);
+            this.memory.consecutiveRejections += 1;
+            this.memory.totalRejections += 1;
+        }
+        
+        // 记录情绪轨迹
+        this.memory.moodHistory.push({ day: day, mood: this.mood });
+        
+        // 钱包更新
+        if (amount > 0 && success) {
+            this.wallet -= amount;
+            this.memory.spendingLog.push({ day: day, amount: amount, action: action, assetId: asset?.id });
+        }
+        
+        // 如果被拒绝太多次 → 暂时退出
+        if (this.memory.consecutiveRejections >= 5) {
+            this.active = false;
+        }
+    }
+    
+    // 获取当前状态的快照（用于可视化）
+    getSnapshot() {
+        return {
+            id: this.id,
+            name: this.name,
+            userType: this.userType,
+            domain: this.domain,
+            wallet: this.wallet,
+            mood: this.mood,
+            active: this.active,
+            personality: { ...this.personality },
+            memory: {
+                totalEvents: this.memory.eventLog.length,
+                totalSpending: this.memory.spendingLog.reduce((s, e) => s + e.amount, 0),
+                totalRejections: this.memory.totalRejections,
+                consecutiveRejections: this.memory.consecutiveRejections,
+            },
+        };
+    }
+}
+
+// ==================== 调度器 ====================
+class Scheduler {
+    constructor(model) {
+        this.model = model;
+        this.agents = [];
+        this.steps = 0;
+    }
+    
+    add(agent) {
+        this.agents.push(agent);
+    }
+    
+    step() {
+        const assets = this.agents.filter(a => a instanceof Asset);
+        for (const asset of assets) {
+            this.model.creatorDaily(asset);
+        }
+        const users = this.agents.filter(a => a instanceof User);
+        for (const user of users) {
+            this.model.userBehavior(user);
+        }
+        this.steps++;
+    }
+}
+
+// ==================== 数据收集器 ====================
+class DataCollector {
+    constructor() {
+        this.data = [];
+    }
+    
+    collect(step, model) {
+        const record = {
+            step: step,
+            day: model.day,
+            totalEvents: model.events.length,
+            totalRevenue: model.assets.reduce((s, a) => s + a.revenue, 0),
+            avgSatisfaction: model.assets.reduce((s, a) => s + a.satisfaction, 0) / model.assets.length,
+            networkDensity: model.calculateNetworkDensity(),
+        };
+        this.data.push(record);
+        return record;
+    }
+    
+    getData() {
+        return this.data;
+    }
+}
+
+// ==================== 模型 ====================
+class EchoModel {
+    constructor(options = {}) {
+        this.rng = new SeededRandom(options.seed);
+        this.day = 1;
+        this.config = options;  // store config for custom creators
+        this.assets = [];
+        this.users = [];
+        this.events = [];
+        this.scheduler = new Scheduler(this);
+        this.dataCollector = new DataCollector();
+        
+        this.nCreators = options.nCreators || 6;
+        this.nUsers = options.nUsers || 20;
+        this.durationDays = options.durationDays || 30;
+        this.strategy = options.strategy || null;
+        this.echoEnabled = options.echoEnabled !== false;
+        
+        this.prices = { browse: 0, cite: 1.5, remix: 3.0, pay: 5.0, spread: 0, dispute: 0 };
+        
+        this.strategies = {
+            conservative: { yong: 1, kuo: 0, yan: 1, yi: 1 },
+            open: { yong: 1, kuo: 1, yan: 0, yi: 0 },
+            balanced: { yong: 1, kuo: 1, yan: 0, yi: 1 },
+            strategic: { yong: 1, kuo: 1, yan: 1, yi: 1 },
+        };
+        
+        this.initAssets();
+        this.initUsers();
+    }
+    
+    initAssets() {
+        const domains = ['开发', '文学', '设计', '设计', '音乐', '摄影'];
+        const creatorTypes = ['独立开发者', '独立作家', '设计小组', '插画师', '独立音乐人', '摄影师'];
+        const names = ['王小明', '苏珊', '共创小组', '林小墨', '阿Ken', '陈默'];
+        
+        const custom = this.config.customCreators || [];
+        
+        for (let i = 0; i < this.nCreators; i++) {
+            let config;
+            if (custom[i] && custom[i].strategy && this.strategies[custom[i].strategy]) {
+                config = { ...this.strategies[custom[i].strategy] };
+            } else if (this.strategy && this.strategies[this.strategy]) {
+                config = { ...this.strategies[this.strategy] };
+            } else {
+                const defaultConfigs = [
+                    { yong: 1, kuo: 1, yan: 0, yi: 1 },
+                    { yong: 1, kuo: 1, yan: 0, yi: 1 },
+                    { yong: 1, kuo: 0, yan: 1, yi: 1 },
+                    { yong: 1, kuo: 1, yan: 1, yi: 1 },
+                    { yong: 1, kuo: 0, yan: 1, yi: 1 },
+                    { yong: 1, kuo: 0, yan: 1, yi: 1 },
+                ];
+                config = defaultConfigs[i % defaultConfigs.length];
+            }
+            
+            const name = (custom[i] && custom[i].name) ? custom[i].name : (names[i] || `创作者${i + 1}`);
+            const domain = (custom[i] && custom[i].domain) ? custom[i].domain : (domains[i] || '通用');
+            const creatorType = (custom[i] && custom[i].type) ? custom[i].type : (creatorTypes[i] || '创作者');
+            const id = (custom[i] && custom[i].id) ? custom[i].id : `echo://asset/${['python','mood','blueprint','zhu','cityloop','night'][i]}001`;
+            
+            const asset = new Asset(id, name, config, domain, creatorType);
+            asset.createdDay = this.day; // 记录创建日，用于冷启动
+            this.assets.push(asset);
+            this.scheduler.add(asset);
+        }
+    }
+    
+    initUsers() {
+        const userTypes = ['browser', 'browser', 'browser', 'browser', 'browser', 'browser',
+                          'citer', 'citer', 'citer', 'citer',
+                          'remixer', 'remixer', 'remixer', 'remixer',
+                          'spreader', 'spreader', 'spreader',
+                          'payer', 'payer',
+                          'disputer'];
+        const domains = ['开发', '文学', '设计', '音乐', '摄影'];
+        
+        for (let i = 0; i < this.nUsers; i++) {
+            const user = new User(
+                `user_${i}`,
+                `用户${i}`,
+                userTypes[i] || 'browser',
+                this.rng.choice(domains)
+            );
+            // 前10个用户中，第3和第7个设为"探索型"（更高随机探索概率）
+            if (i === 3 || i === 7) {
+                user.exploreRate = 0.5;
+                user.name = `探索者${i}`;
+            }
+            this.users.push(user);
+            this.scheduler.add(user);
+        }
+    }
+    
+    checkPermission(asset, action) {
+        if (!this.echoEnabled) return { allowed: true, reason: 'ECHO未启用' };
+        
+        const config = asset.config;
+        const permissions = {
+            browse: true,
+            cite: config.yong === 1,
+            remix: config.yan === 0,
+            pay: config.yi === 1,
+            spread: config.kuo === 1,
+        };
+        
+        const allowed = permissions[action] || false;
+        return {
+            allowed,
+            reason: allowed ? '允许' : `配置禁止: ${action}`
+        };
+    }
+    
+    creatorDaily(asset) {
+        if (this.rng.random() < 0.1) {
+            asset.updateSatisfaction(this.rng.gauss(0, 0.2));
+        }
+        
+        if (this.rng.random() < 0.1) {
+            const newPlatform = `平台${this.rng.randint(1, 10)}`;
+            if (!asset.platforms.has(newPlatform)) {
+                asset.platforms.add(newPlatform);
+                this.events.push(new Event(
+                    this.day, 'config_change', asset.id, asset.id, 0,
+                    { type: 'platform_added', platform: newPlatform }
+                ));
+            }
+        }
+    }
+    
+    userBehavior(user) {
+        // Step 1: 感知（扫描资产）
+        user.perceive(this.assets, this.day);
+        
+        // Step 2: 决策（根据感知决定行动）
+        const intention = user.evaluate(this.day, this);
+        user.lastIntention = intention; // 保存供 executeAction 使用
+        
+        // 如果决定休息 → 不执行任何操作
+        if (intention.action === 'rest' || !intention.asset) {
+            // 记录休息事件（带原因）
+            const event = new Event(
+                this.day,
+                'rest',
+                user.id,
+                null,
+                0,
+                { reason: intention.reason, platform: '—' }
+            );
+            this.events.push(event);
+            user.learn('rest', null, true, 0, this.day);
+            return;
+        }
+        
+        const action = intention.action;
+        const target = intention.asset;
+        
+        // ═══ 特殊处理：创作行为（用户变成创作者）═══
+        if (action === 'create') {
+            this.executeCreate(user, target);
+            user.learn('create', target, true, 5, this.day); // 创作成本 5
+            return;
+        }
+        
+        // Step 3: 权限检查
+        const permission = this.checkPermission(target, action);
+        
+        // Step 4: 执行（成功或失败都会记录）
+        if (permission.allowed) {
+            this.executeAction(user, target, action);
+            // 冷启动期价格可能为0
+            const daysSinceCreated = this.day - (target.createdDay || 0);
+            let effectivePrice = this.prices[action] || 0;
+            if (action === 'pay' && daysSinceCreated <= 3) {
+                effectivePrice = 0;
+            }
+            user.learn(action, target, true, effectivePrice, this.day);
+        } else {
+            // 被拒 → 记录失败事件（带原因）
+            const event = new Event(
+                this.day,
+                'reject',
+                user.id,
+                target.id,
+                0,
+                { 
+                    reason: intention.reason + '（被拒：' + (permission.reason || '权限不足') + '）',
+                    platform: this.rng.choice([...target.platforms]) || '默认平台',
+                    attemptedAction: action,
+                }
+            );
+            this.events.push(event);
+            user.learn(action, target, false, 0, this.day);
+        }
+    }
+    
+    selectTargetAsset(user, action) {
+        const candidates = this.assets.filter(a => {
+            if (action === 'cite') return a.config.yong === 1;
+            if (action === 'remix') return a.config.yan === 0;
+            return true;
+        });
+        
+        if (candidates.length === 0) return this.rng.choice(this.assets);
+        
+        if (this.rng.random() < 0.6) {
+            const sameDomain = candidates.filter(a => a.domain === user.domain);
+            if (sameDomain.length > 0) return this.rng.choice(sameDomain);
+        }
+        
+        return this.rng.choice(candidates);
+    }
+    
+    executeAction(user, asset, action) {
+        let price = this.prices[action] || 0;
+        
+        // 冷启动期：资产创建后前3天，pay 动作免费（模拟 ECHO 阶段1冷启动）
+        const daysSinceCreated = this.day - (asset.createdDay || 0);
+        if (action === 'pay' && daysSinceCreated <= 3) {
+            price = 0;
+        }
+        
+        const event = new Event(
+            this.day,
+            action,
+            user.id,
+            asset.id,
+            price,
+            { 
+                platform: this.rng.choice([...asset.platforms]) || '默认平台',
+                reason: user.lastIntention?.reason || '',
+            }
+        );
+        this.events.push(event);
+        
+        asset.eventCounts[action] = (asset.eventCounts[action] || 0) + 1;
+        
+        if (price > 0) {
+            asset.revenue += price;
+            // 钱包扣除移到 learn() 中处理
+        }
+        
+        if (action === 'pay') asset.updateSatisfaction(0.5);
+        else if (action === 'cite') asset.updateSatisfaction(0.2);
+        else if (action === 'remix') asset.updateSatisfaction(this.rng.random() < 0.5 ? 0.3 : -0.2);
+        else if (action === 'dispute') asset.updateSatisfaction(-1.0);
+        
+        if (action !== 'browse') {
+            const existing = asset.relationships.find(r => r.target === user.id && r.type === action);
+            if (existing) {
+                existing.weight += 1;
+            } else {
+                asset.relationships.push({ type: action, target: user.id, weight: 1, createdDay: this.day });
+            }
+        }
+        
+        // 旧内存记录已移到 learn() 中
+    }
+    
+    // ─── 用户创作新资产（用户→创作者）───
+    executeCreate(user, sourceAsset) {
+        // 扣除创作成本
+        const createCost = 5;
+        user.wallet -= createCost;
+        
+        // 生成新资产配置（基于源资产微调）
+        const newConfig = {
+            yong: sourceAsset.config.yong, // 继承可引用性
+            kuo: Math.max(0, Math.min(5, sourceAsset.config.kuo + this.rng.randint(-1, 1))),
+            yan: Math.max(0, Math.min(2, sourceAsset.config.yan + this.rng.randint(-1, 1))),
+            yi: 1, // 默认可付费
+        };
+        
+        // 创建新资产
+        const newAssetId = `echo://asset/${user.id}_${this.day}_${this.rng.randint(100, 999)}`;
+        const newAssetName = `${user.name}的${sourceAsset.domain}作品`;
+        const newAsset = new Asset(
+            newAssetId,
+            newAssetName,
+            newConfig,
+            user.domain,
+            `${user.userType}创作者` // 例如 "引用者创作者"
+        );
+        newAsset.createdDay = this.day;
+        
+        // 加入模拟器
+        this.assets.push(newAsset);
+        this.scheduler.add(newAsset);
+        
+        // 建立衍生关系：新资产与源资产
+        newAsset.relationships.push({
+            type: 'derive',
+            target: sourceAsset.id,
+            weight: 1,
+            createdDay: this.day
+        });
+        sourceAsset.relationships.push({
+            type: 'derive',
+            target: newAsset.id,
+            weight: 1,
+            createdDay: this.day
+        });
+        
+        // 记录创作事件
+        const event = new Event(
+            this.day,
+            'create',
+            user.id,
+            newAssetId,
+            createCost,
+            {
+                platform: this.rng.choice([...sourceAsset.platforms]) || '默认平台',
+                reason: user.lastIntention?.reason || '',
+                sourceAsset: sourceAsset.id,
+                sourceName: sourceAsset.name,
+            }
+        );
+        this.events.push(event);
+        
+        // 更新用户状态
+        if (!user.createdAssets) user.createdAssets = [];
+        user.createdAssets.push(newAssetId);
+        
+        // 提升用户满意度（创作成就感）
+        user.mood = Math.min(1.0, user.mood + 0.3);
+    }
+    
+    evaluateShi() {
+        for (const asset of this.assets) {
+            const totalEvents = Object.values(asset.eventCounts).reduce((s, c) => s + c, 0);
+            const nPlatforms = asset.platforms.size;
+            const nRelations = asset.relationships.length;
+            
+            let timeLevel = 0;
+            if (totalEvents <= 10) timeLevel = 0;
+            else if (totalEvents <= 30) timeLevel = 1;
+            else if (totalEvents <= 80) timeLevel = 2;
+            else timeLevel = 3;
+            
+            let spaceLevel = 0;
+            if (nPlatforms <= 1) spaceLevel = 0;
+            else if (nPlatforms <= 4) spaceLevel = 1;
+            else if (nPlatforms <= 10) spaceLevel = 2;
+            else spaceLevel = 3;
+            
+            let relationLevel = 0;
+            if (nRelations === 0) relationLevel = 0;
+            else if (nRelations <= 3) relationLevel = 1;
+            else if (nRelations <= 10) relationLevel = 2;
+            else relationLevel = 3;
+            
+            const avgLevel = Math.round((timeLevel + spaceLevel + relationLevel) / 3);
+            asset.shiLevel = Math.min(3, avgLevel);
+            
+            asset.shiHistory.push({
+                day: this.day,
+                level: asset.shiLevel,
+                time: timeLevel,
+                space: spaceLevel,
+                relation: relationLevel,
+            });
+        }
+    }
+    
+    calculateNetworkDensity() {
+        const n = this.assets.length + this.users.length;
+        if (n <= 1) return 0;
+        
+        let edges = 0;
+        for (const asset of this.assets) {
+            edges += asset.relationships.length;
+        }
+        
+        const maxEdges = n * (n - 1) / 2;
+        return edges / maxEdges;
+    }
+    
+    run() {
+        this.snapshots = [];
+        for (let day = 1; day <= this.durationDays; day++) {
+            this.day = day;
+            
+            const stepsPerDay = 5;
+            for (let s = 0; s < stepsPerDay; s++) {
+                this.scheduler.step();
+            }
+            
+            if (day % 7 === 0) {
+                this.evaluateShi();
+            }
+            
+            if (day % 5 === 0 || day === this.durationDays) {
+                this.dataCollector.collect(day, this);
+            }
+            
+            // Save daily snapshot for playback
+            this.snapshots.push({
+                day: day,
+                events: this.events.filter(e => e.day === day).map(e => ({
+                    day: e.day, type: e.type, from: e.from, to: e.to, amount: e.amount, details: e.details
+                })),
+                creatorStates: this.assets.map(a => ({
+                    id: a.id,
+                    name: a.name,
+                    domain: a.domain,
+                    revenue: a.revenue,
+                    satisfaction: a.satisfaction,
+                    shiLevel: a.shiLevel,
+                    eventCounts: { ...a.eventCounts },
+                    relationships: a.relationships.map(r => ({ ...r })),
+                })),
+                userStates: this.users.map(u => ({
+                    id: u.id,
+                    name: u.name,
+                    userType: u.userType,
+                    domain: u.domain,
+                    wallet: u.wallet,
+                    mood: u.mood,
+                    active: u.active,
+                    memory: {
+                        totalEvents: u.memory.eventLog.length,
+                        totalSpending: u.memory.spendingLog.reduce((s, e) => s + e.amount, 0),
+                        totalRejections: u.memory.totalRejections,
+                        consecutiveRejections: u.memory.consecutiveRejections,
+                        assetTrust: { ...u.memory.assetTrust },
+                    },
+                })),
+                metrics: {
+                    totalEvents: this.events.length,
+                    totalRevenue: this.assets.reduce((s, a) => s + a.revenue, 0),
+                    avgSatisfaction: this.assets.reduce((s, a) => s + a.satisfaction, 0) / this.assets.length,
+                    networkDensity: this.calculateNetworkDensity(),
+                    avgMood: this.users.reduce((s, u) => s + u.mood, 0) / this.users.length,
+                    activeUsers: this.users.filter(u => u.active).length,
+                }
+            });
+        }
+        
+        this.evaluateShi();
+        
+        return this.getResults();
+    }
+    
+    getResults() {
+        return {
+            creators: this.assets.map(a => ({
+                id: a.id,
+                name: a.name,
+                domain: a.domain,
+                config: a.config,
+                revenue: a.revenue,
+                satisfaction: a.satisfaction,
+                shiLevel: a.shiLevel,
+                platforms: [...a.platforms],
+                eventCounts: { ...a.eventCounts },
+                relationships: [...a.relationships.map(r => ({ ...r }))],
+                shiHistory: [...a.shiHistory],
+            })),
+            users: this.users.map(u => ({
+                id: u.id,
+                name: u.name,
+                userType: u.userType,
+                domain: u.domain,
+                wallet: u.wallet,
+                mood: u.mood,
+                active: u.active,
+                personality: { ...u.personality },
+                memory: {
+                    totalEvents: u.memory.eventLog.length,
+                    totalSpending: u.memory.spendingLog.reduce((s, e) => s + e.amount, 0),
+                    totalRejections: u.memory.totalRejections,
+                    consecutiveRejections: u.memory.consecutiveRejections,
+                    assetTrust: { ...u.memory.assetTrust },
+                },
+            })),
+            events: this.events.map(e => ({
+                day: e.day,
+                type: e.type,
+                from: e.from,
+                to: e.to,
+                amount: e.amount,
+                details: e.details,
+            })),
+            metrics: {
+                totalEvents: this.events.length,
+                totalRevenue: this.assets.reduce((s, a) => s + a.revenue, 0),
+                avgSatisfaction: this.assets.reduce((s, a) => s + a.satisfaction, 0) / this.assets.length,
+                networkDensity: this.calculateNetworkDensity(),
+                nCreators: this.nCreators,
+                nUsers: this.nUsers,
+                durationDays: this.durationDays,
+                seed: this.rng.originalSeed,
+            },
+            timeSeries: this.dataCollector.getData(),
+            snapshots: this.snapshots || [],
+        };
+    }
+}
+
+// ==================== 策略锦标赛 ====================
+function runTournamentJS(options = {}) {
+    const strategies = ['conservative', 'open', 'balanced', 'strategic'];
+    const results = {};
+    const nRounds = options.nRounds || 10;
+    
+    for (const strategy of strategies) {
+        const roundResults = [];
+        for (let i = 0; i < nRounds; i++) {
+            const model = new EchoModel({
+                nCreators: options.nCreators || 6,
+                nUsers: options.nUsers || 20,
+                durationDays: options.durationDays || 30,
+                strategy: strategy,
+                seed: options.seed ? options.seed + i : Math.floor(Math.random() * 100000),
+            });
+            const result = model.run();
+            roundResults.push({
+                revenue: result.metrics.totalRevenue,
+                satisfaction: result.metrics.avgSatisfaction,
+                density: result.metrics.networkDensity,
+                events: result.metrics.totalEvents,
+            });
+        }
+        
+        results[strategy] = {
+            name: { conservative: '保守型', open: '开放型', balanced: '平衡型', strategic: '策略型' }[strategy],
+            avgRevenue: roundResults.reduce((s, r) => s + r.revenue, 0) / nRounds,
+            avgSatisfaction: roundResults.reduce((s, r) => s + r.satisfaction, 0) / nRounds,
+            avgNetworkDensity: roundResults.reduce((s, r) => s + r.density, 0) / nRounds,
+            avgEvents: roundResults.reduce((s, r) => s + r.events, 0) / nRounds,
+        };
+    }
+    
+    return { results, nRounds };
+}
+
+// ==================== A/B 实验 ====================
+function runABExperimentJS(options = {}) {
+    const nRounds = options.nRounds || 10;
+    const echoResults = [];
+    const controlResults = [];
+    
+    for (let i = 0; i < nRounds; i++) {
+        const seed = options.seed ? options.seed + i : Math.floor(Math.random() * 100000);
+        
+        const echoModel = new EchoModel({
+            ...options,
+            seed: seed,
+            echoEnabled: true,
+        });
+        const echoResult = echoModel.run();
+        echoResults.push(echoResult.metrics.totalRevenue);
+        
+        const controlModel = new EchoModel({
+            ...options,
+            seed: seed,
+            echoEnabled: false,
+        });
+        const controlResult = controlModel.run();
+        const platformRevenue = controlResult.metrics.totalRevenue * 0.3;
+        controlResults.push(controlResult.metrics.totalRevenue - platformRevenue);
+    }
+    
+    const echoMean = echoResults.reduce((s, v) => s + v, 0) / nRounds;
+    const controlMean = controlResults.reduce((s, v) => s + v, 0) / nRounds;
+    const echoStd = Math.sqrt(echoResults.reduce((s, v) => s + Math.pow(v - echoMean, 2), 0) / nRounds);
+    const controlStd = Math.sqrt(controlResults.reduce((s, v) => s + Math.pow(v - controlMean, 2), 0) / nRounds);
+    
+    return {
+        echoGroup: {
+            meanRevenue: echoMean,
+            stdRevenue: echoStd,
+            revenues: echoResults,
+        },
+        controlGroup: {
+            meanRevenue: controlMean,
+            stdRevenue: controlStd,
+            revenues: controlResults,
+        },
+        comparison: {
+            revenueDiff: echoMean - controlMean,
+            revenueDiffPct: ((echoMean - controlMean) / controlMean * 100).toFixed(1),
+        },
+        nRounds,
+    };
+}
+
+// ==================== 导出 ====================
+const EchoSimulator = { EchoModel, runTournamentJS, runABExperimentJS, SeededRandom };
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = EchoSimulator;
+}
+
+// ES 模块导出（用于前端 type="module"）
+if (typeof window !== 'undefined') {
+    window.EchoSimulator = EchoSimulator;
+    window.EchoModel = EchoModel;
+    window.runTournamentJS = runTournamentJS;
+    window.runABExperimentJS = runABExperimentJS;
+    window.SeededRandom = SeededRandom;
+}
+
+// Node.js 全局暴露（用于测试）
+if (typeof globalThis !== 'undefined' && typeof window === 'undefined') {
+    globalThis.EchoModel = EchoModel;
+    globalThis.Asset = Asset;
+    globalThis.User = User;
+    globalThis.Event = Event;
+    globalThis.SeededRandom = SeededRandom;
+    globalThis.runTournamentJS = runTournamentJS;
+    globalThis.runABExperimentJS = runABExperimentJS;
+}
+
+</script>
+    <script>
+        let simData = null;
+        let currentDay = 1;
+        let isPlaying = false;
+        let playTimer = null;
+        let playSpeed = 800;
+        let currentFilter = 'all';
+        let isRunning = false;
+        let backendAvailable = false;
+        let backendChecked = false;
+        const API_BASE = 'http://101.126.86.218:8000';
+
+        const EVENT_LABELS = { browse: '浏览', cite: '引用', remix: '改编', pay: '付费', spread: '传播', dispute: '争议', config_change: '配置', rest: '休息', reject: '被拒', create: '创作', ad_revenue: '广告', cite_free: '免费引用', remix_direct: '直接改编', remix_approved: '批准', remix_rejected: '拒绝' };
+        const SHI_COLORS = ['#e0e0e0', '#90c695', '#4A7C6F', '#c4a35a'];
+        const EVENT_COLORS = { browse: '#2e7d32', cite: '#1565c0', remix: '#e65100', pay: '#6a1b9a', spread: '#00695c', dispute: '#c62828', config_change: '#616161', rest: '#a0b0a8', reject: '#c44536', create: '#7a8b82', ad_revenue: '#f9a825', cite_free: '#90a4ae', remix_direct: '#ff8a65', remix_approved: '#66bb6a', remix_rejected: '#ef5350' };
+
+        // ─── Backend Health Check ───
+        async function checkBackendHealth() {
+            try {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 3000);
+                const response = await fetch(`${API_BASE}/health`, { signal: controller.signal });
+                clearTimeout(timeout);
+                backendAvailable = response.ok;
+                backendChecked = true;
+                if (backendAvailable) {
+                    showToast('✅ 后端引擎已连接', 'info');
+                } else {
+                    showToast('⚠️ 后端未就绪，将使用本地引擎', 'warn');
+                }
+            } catch (e) {
+                backendAvailable = false;
+                backendChecked = true;
+                showToast('⚠️ 后端未就绪，将使用本地引擎', 'warn');
+            }
+        }
+
+        // ─── Loading Overlay ───
+        function showLoading(text, sub) {
+            const overlay = document.getElementById('loading-overlay');
+            document.getElementById('loading-text').textContent = text || '计算中...';
+            document.getElementById('loading-sub').textContent = sub || '';
+            document.getElementById('progress-fill').style.width = '0%';
+            overlay.classList.add('active');
+        }
+
+        function hideLoading() {
+            document.getElementById('loading-overlay').classList.remove('active');
+        }
+
+        function setProgress(pct) {
+            document.getElementById('progress-fill').style.width = Math.min(100, Math.max(0, pct)) + '%';
+        }
+
+        // ─── Toast ───
+        let toastTimer = null;
+        function showToast(msg, type) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = 'toast show' + (type ? ' ' + type : '');
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+
+        // ─── Init ───
+        function initApp() {
+            // Check backend first
+            checkBackendHealth();
+
+            // Filter pills
+            document.querySelectorAll('.filter-pill').forEach(p => {
+                p.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-pill').forEach(x => x.classList.remove('active'));
+                    p.classList.add('active');
+                    currentFilter = p.dataset.filter;
+                    renderEvents();
+                });
+            });
+
+            // Speed buttons
+            document.querySelectorAll('.speed-btn').forEach(b => {
+                b.addEventListener('click', () => {
+                    document.querySelectorAll('.speed-btn').forEach(x => x.classList.remove('active'));
+                    b.classList.add('active');
+                    playSpeed = parseInt(b.dataset.speed);
+                });
+            });
+
+            // Slider
+            const slider = document.getElementById('day-slider');
+            slider.addEventListener('input', () => {
+                pause();
+                goToDay(parseInt(slider.value));
+            });
+
+            // Play/Pause
+            document.getElementById('btn-play').addEventListener('click', togglePlay);
+            document.getElementById('btn-prev').addEventListener('click', () => { pause(); goToDay(Math.max(1, currentDay - 1)); });
+            document.getElementById('btn-next').addEventListener('click', () => { pause(); goToDay(Math.min(simData?.snapshots?.length || 30, currentDay + 1)); });
+
+            // Custom creators panel
+            document.getElementById('btn-toggle-custom').addEventListener('click', () => {
+                const panel = document.getElementById('custom-creators-panel');
+                const chevron = document.getElementById('custom-chevron');
+                if (panel.style.display === 'none') {
+                    panel.style.display = 'block';
+                    chevron.textContent = '▼';
+                    renderCustomTable();
+                } else {
+                    panel.style.display = 'none';
+                    chevron.textContent = '▶';
+                }
+            });
+
+            // Auto-update custom table when nCreators changes
+            document.getElementById('cfg-creators').addEventListener('change', () => {
+                if (document.getElementById('custom-creators-panel').style.display !== 'none') {
+                    renderCustomTable();
+                }
+            });
+        }
+
+        // ─── Custom Creators Panel ───
+        function renderCustomTable() {
+            const n = parseInt(document.getElementById('cfg-creators').value) || 6;
+            const defaultNames = ['王小明','苏珊','共创小组','林小墨','阿Ken','陈默'];
+            const defaultDomains = ['开发','文学','设计','设计','音乐','摄影'];
+            const container = document.getElementById('custom-creators-table');
+
+            let html = '<table style="width:100%;border-collapse:collapse;font-size:0.8rem;"><thead><tr style="background:rgba(74,124,111,0.08);">';
+            html += '<th style="padding:6px 8px;text-align:left;width:40px;">#</th>';
+            html += '<th style="padding:6px 8px;text-align:left;">名字</th>';
+            html += '<th style="padding:6px 8px;text-align:left;">领域</th>';
+            html += '<th style="padding:6px 8px;text-align:left;">策略</th>';
+            html += '</tr></thead><tbody>';
+
+            for (let i = 0; i < n; i++) {
+                html += `<tr style="border-bottom:1px solid var(--border-light);">`;
+                html += `<td style="padding:6px 8px;color:var(--ink-faint);">${i+1}</td>`;
+                html += `<td style="padding:4px 8px;"><input type="text" class="cc-name" data-idx="${i}" value="${defaultNames[i]||''}" placeholder="创作者${i+1}" style="width:100%;padding:3px 6px;border:1px solid var(--border-light);border-radius:4px;font-size:0.75rem;font-family:inherit;background:var(--paper);"></td>`;
+                html += `<td style="padding:4px 8px;"><select class="cc-domain" data-idx="${i}" style="padding:3px 6px;border:1px solid var(--border-light);border-radius:4px;font-size:0.75rem;font-family:inherit;background:var(--paper);">`;
+                ['开发','文学','设计','音乐','摄影','通用'].forEach(d => {
+                    const sel = d === (defaultDomains[i]||'通用') ? 'selected' : '';
+                    html += `<option value="${d}" ${sel}>${d}</option>`;
+                });
+                html += `</select></td>`;
+                html += `<td style="padding:4px 8px;"><select class="cc-strategy" data-idx="${i}" style="padding:3px 6px;border:1px solid var(--border-light);border-radius:4px;font-size:0.75rem;font-family:inherit;background:var(--paper);">`;
+                const strategies = [['','（继承全局）'],['open','开放型'],['balanced','平衡型'],['conservative','保守型'],['strategic','策略型']];
+                strategies.forEach(([val,label]) => {
+                    html += `<option value="${val}">${label}</option>`;
+                });
+                html += `</select></td>`;
+                html += `</tr>`;
+            }
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function getCustomCreators() {
+            const names = document.querySelectorAll('.cc-name');
+            const domains = document.querySelectorAll('.cc-domain');
+            const strategies = document.querySelectorAll('.cc-strategy');
+            const creators = [];
+            names.forEach((el, i) => {
+                const name = el.value.trim();
+                const domain = domains[i]?.value;
+                const strategy = strategies[i]?.value;
+                if (name || domain || strategy) {
+                    creators.push({ name: name || undefined, domain: domain || undefined, strategy: strategy || undefined });
+                }
+            });
+            return creators.length > 0 ? creators : undefined;
+        }
+
+        // ─── Playback ───
+        function togglePlay() {
+            if (isPlaying) { pause(); }
+            else { play(); }
+        }
+
+        function play() {
+            if (!simData || !simData.snapshots) return;
+            isPlaying = true;
+            document.getElementById('btn-play').textContent = '⏸';
+            if (currentDay >= simData.snapshots.length) {
+                currentDay = 1;
+            }
+            tick();
+        }
+
+        function pause() {
+            isPlaying = false;
+            document.getElementById('btn-play').textContent = '▶';
+            if (playTimer) clearTimeout(playTimer);
+        }
+
+        function tick() {
+            if (!isPlaying) return;
+            const maxDay = simData.snapshots.length;
+            if (currentDay >= maxDay) {
+                pause();
+                return;
+            }
+            currentDay++;
+            goToDay(currentDay);
+            playTimer = setTimeout(tick, playSpeed);
+        }
+
+        function goToDay(day) {
+            currentDay = day;
+            document.getElementById('current-day').textContent = day;
+            document.getElementById('day-slider').value = day;
+            renderDay();
+        }
+
+        // ─── Run Simulation ───
+        async function runSimulation() {
+            if (isRunning) return;
+            isRunning = true;
+
+            const cfg = {
+                nCreators: parseInt(document.getElementById('cfg-creators').value) || 6,
+                nUsers: parseInt(document.getElementById('cfg-users').value) || 20,
+                durationDays: parseInt(document.getElementById('cfg-days').value) || 30,
+                strategy: document.getElementById('cfg-strategy').value || null,
+                seed: parseInt(document.getElementById('cfg-seed').value) || 42,
+            };
+
+            // Add custom creators if panel is open and filled
+            const custom = getCustomCreators();
+            if (custom) cfg.customCreators = custom;
+
+            // Build API payload (snake_case for backend)
+            const apiBody = {
+                n_creators: cfg.nCreators,
+                n_users: cfg.nUsers,
+                duration_days: cfg.durationDays,
+                echo_enabled: true,
+                seed: cfg.seed,
+                strategy: cfg.strategy,
+            };
+            if (custom && custom.length > 0) {
+                apiBody.custom_creators = custom.map(c => ({
+                    name: c.name,
+                    domain: c.domain,
+                    strategy: c.strategy || cfg.strategy,
+                }));
+            }
+
+            // Try backend first
+            if (backendChecked && backendAvailable) {
+                showLoading('后端模拟计算中...', `${cfg.nCreators} 创作者 · ${cfg.nUsers} 使用者 · ${cfg.durationDays} 天`);
+                // Simulate progress animation
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += Math.random() * 8;
+                    if (progress > 85) progress = 85;
+                    setProgress(progress);
+                }, 500);
+
+                try {
+                    const controller = new AbortController();
+                    const timeoutMs = Math.max(30000, cfg.durationDays * cfg.nUsers * 20);
+                    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+                    const response = await fetch(`${API_BASE}/run`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(apiBody),
+                        signal: controller.signal,
+                    });
+                    clearTimeout(timeoutId);
+
+                    if (!response.ok) {
+                        throw new Error(`后端返回 HTTP ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    clearInterval(progressInterval);
+                    setProgress(100);
+
+                    if (!data.success || !data.results) {
+                        throw new Error('后端返回数据格式异常: 缺少 success/results 字段');
+                    }
+
+                    simData = data.results;
+                    console.log('✅ 后端模拟完成:', {
+                        events: simData.events?.length,
+                        snapshots: simData.snapshots?.length,
+                        creators: simData.creators?.length,
+                        users: simData.users?.length,
+                    });
+                    showToast('✅ 后端模拟完成', 'info');
+
+                    hideLoading();
+                    finalizeRun(cfg);
+                    isRunning = false;
+                    return;
+                } catch (apiErr) {
+                    clearInterval(progressInterval);
+                    hideLoading();
+                    console.warn('后端调用失败，降级到本地引擎:', apiErr.message);
+                    showToast(`⚠️ 后端不可用 (${apiErr.message})，使用本地引擎`, 'warn');
+                    backendAvailable = false;
+                    // Fall through to local engine
+                }
+            }
+
+            // ─── Local JS Fallback ───
+            showLoading('本地引擎运行中...', '前端 JavaScript 计算');
+            setProgress(10);
+            await new Promise(r => setTimeout(r, 100)); // let UI update
+
+            try {
+                if (typeof EchoModel === 'undefined') {
+                    throw new Error('本地引擎 (echo_simulation.js) 未加载');
+                }
+                const model = new EchoModel(cfg);
+                setProgress(30);
+                simData = model.run();
+                setProgress(100);
+                showToast('✅ 本地模拟完成', 'info');
+            } catch (localErr) {
+                hideLoading();
+                showToast(`❌ 本地引擎也失败了: ${localErr.message}`, 'warn');
+                console.error('本地引擎错误:', localErr);
+                isRunning = false;
+                return;
+            }
+
+            hideLoading();
+            finalizeRun(cfg);
+            isRunning = false;
+        }
+
+        function finalizeRun(cfg) {
+            if (!simData) return;
+            document.getElementById('total-days').textContent = '/ ' + cfg.durationDays;
+            document.getElementById('day-slider').max = cfg.durationDays;
+            document.getElementById('day-slider').value = 1;
+            currentDay = 1;
+            document.getElementById('current-day').textContent = '1';
+            renderDay();
+            renderDailyChart();
+            renderTrendChart();
+        }
+
+        // ─── Render Day ───
+        function renderDay() {
+            if (!simData || !simData.snapshots) return;
+            const snapshot = simData.snapshots[currentDay - 1];
+            if (!snapshot) return;
+
+            renderEvents();
+            renderNetwork(snapshot);
+            renderRankings(snapshot);
+            renderUsers(snapshot);
+            updateMetrics(snapshot);
+            updateFilterCounts();
+        }
+
+        // ─── Events ───
+        function renderEvents() {
+            const container = document.getElementById('events-body');
+            if (!simData || !simData.snapshots) {
+                container.innerHTML = '<div class="events-empty">暂无事件</div>';
+                return;
+            }
+
+            const snapshot = simData.snapshots[currentDay - 1];
+            const dayEvents = snapshot.events || [];
+
+            const filtered = currentFilter === 'all'
+                ? dayEvents
+                : dayEvents.filter(e => e.type === currentFilter);
+
+            // Count display
+            const totalToday = dayEvents.length;
+            document.getElementById('events-count').textContent = `${filtered.length} / ${totalToday} 个`;
+
+            if (!filtered.length) {
+                container.innerHTML = '<div class="events-empty">第 ' + currentDay + ' 天暂无该类型事件</div>';
+                return;
+            }
+
+            const summaryText = totalToday > 0
+                ? `<div class="day-summary">第 <strong>${currentDay}</strong> 天共 <strong>${totalToday}</strong> 个事件</div>`
+                : '';
+
+            container.innerHTML = summaryText + filtered.map(e => renderEventItem(e)).join('');
+        }
+
+        function renderEventItem(e) {
+            const toName = getActorName(e.to);
+            const fromName = getActorName(e.from);
+            const label = EVENT_LABELS[e.type] || e.type;
+            const amount = e.amount > 0 ? `<span class="event-amount">+${e.amount.toFixed(2)}</span>` : '';
+            const reason = e.details?.reason ? `<span style="font-size:0.7rem;color:var(--ink-faint);margin-left:6px;" title="Agent决策">💭 ${e.details.reason}</span>` : '';
+            
+            // create 事件特殊显示：to 是新资产，显示源资产信息
+            let toDisplay = toName;
+            let arrowDisplay = '→';
+            if (e.type === 'create') {
+                toDisplay = '新资产';
+                arrowDisplay = '✨';
+            }
+
+            return `
+                <div class="event-item">
+                    <span class="event-tag tag-${e.type}">${label}</span>
+                    <span class="event-actor">${fromName}</span>
+                    <span class="event-arrow">${arrowDisplay}</span>
+                    <span class="event-actor">${toDisplay}</span>
+                    ${amount}
+                    ${reason}
+                </div>
+            `;
+        }
+
+        function getActorName(id) {
+            if (!simData) return id || '?';
+            const c = simData.creators.find(c => c.id === id);
+            if (c) return c.name;
+            const u = simData.users.find(u => u.id === id);
+            if (u) return u.name || u.id;
+            return id || '系统';
+        }
+
+        function updateFilterCounts() {
+            if (!simData || !simData.snapshots) return;
+            // Count all events across all days for reference
+            const counts = {};
+            simData.snapshots.forEach(s => {
+                (s.events || []).forEach(e => { counts[e.type] = (counts[e.type] || 0) + 1; });
+            });
+            document.querySelectorAll('.filter-pill:not(.all)').forEach(p => {
+                const type = p.dataset.filter;
+                const c = counts[type] || 0;
+                const existing = p.querySelector('.count');
+                if (existing) existing.textContent = c;
+                else p.innerHTML += `<span class="count">${c}</span>`;
+            });
+        }
+
+        // ─── Network ───
+        function renderNetwork(snapshot) {
+            const container = document.getElementById('network-viz');
+            const svgOld = container.querySelector('svg');
+            if (svgOld) svgOld.remove();
+
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            if (!width || !height) return;
+
+            const svg = d3.select('#network-viz').append('svg')
+                .attr('width', width).attr('height', height);
+
+            const creators = snapshot.creatorStates || [];
+            const users = simData.users || [];
+
+            // Nodes
+            const nodes = [
+                ...creators.map((c, i) => ({
+                    id: c.id, name: c.name, type: 'creator',
+                    shi: c.shiLevel || 0, revenue: c.revenue || 0,
+                    x: width / 2 + (Math.random() - 0.5) * 200,
+                    y: height / 2 + (Math.random() - 0.5) * 200
+                })),
+                ...users.map(u => ({
+                    id: u.id, name: u.name || u.id, type: 'user',
+                    x: width / 2 + (Math.random() - 0.5) * 300,
+                    y: height / 2 + (Math.random() - 0.5) * 300
+                }))
+            ];
+
+            // Edges from snapshot relationships (only those created by this day)
+            const edges = [];
+            creators.forEach(c => {
+                (c.relationships || []).forEach(r => {
+                    if (nodes.find(n => n.id === r.target)) {
+                        edges.push({ source: c.id, target: r.target, type: r.type || 'cite', weight: r.weight || 1 });
+                    }
+                });
+            });
+
+            const sim = d3.forceSimulation(nodes)
+                .force('link', d3.forceLink(edges).id(d => d.id).distance(100))
+                .force('charge', d3.forceManyBody().strength(d => d.type === 'user' ? -80 : -400))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide().radius(d => d.type === 'user' ? 8 : 25));
+
+            const link = svg.append('g').selectAll('line').data(edges).enter().append('line')
+                .attr('stroke', d => EVENT_COLORS[d.type] || '#999')
+                .attr('stroke-opacity', 0.4)
+                .attr('stroke-width', d => Math.sqrt(d.weight));
+
+            const node = svg.append('g').selectAll('g').data(nodes).enter().append('g')
+                .call(d3.drag()
+                    .on('start', (e, d) => { if (!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+                    .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
+                    .on('end', (e, d) => { if (!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; }));
+
+            node.each(function(d) {
+                const g = d3.select(this);
+                if (d.type === 'user') {
+                    g.append('circle').attr('r', 5).attr('fill', '#bbb').attr('opacity', 0.6);
+                } else {
+                    const r = 12 + Math.min(d.revenue * 0.8, 20);
+                    g.append('circle').attr('r', r)
+                        .attr('fill', SHI_COLORS[d.shi] || SHI_COLORS[0])
+                        .attr('stroke', '#fff').attr('stroke-width', 2);
+                    g.append('text').attr('dy', 4).attr('text-anchor', 'middle')
+                        .attr('fill', d.shi >= 2 ? '#fff' : '#333')
+                        .attr('font-size', '10px').attr('font-weight', 'bold')
+                        .text(`L${d.shi}`);
+                }
+            });
+
+            node.append('text').attr('dy', d => d.type === 'user' ? -10 : -20)
+                .attr('text-anchor', 'middle').attr('font-size', d => d.type === 'user' ? '8px' : '11px')
+                .attr('fill', '#444').text(d => d.name);
+
+            sim.on('tick', () => {
+                link.attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+                node.attr('transform', d => `translate(${d.x},${d.y})`);
+            });
+        }
+
+        // ─── Rankings ───
+        function renderRankings(snapshot) {
+            const container = document.getElementById('rank-body');
+            if (!snapshot) return;
+            const creators = snapshot.creatorStates || [];
+            const sorted = [...creators].sort((a, b) => (b.revenue || 0) - (a.revenue || 0));
+
+            container.innerHTML = sorted.map((c, i) => {
+                const shi = c.shiLevel || 0;
+                return `
+                    <div class="rank-row">
+                        <div class="rank-idx ${i < 3 ? 'top' : ''}">${i + 1}</div>
+                        <div class="rank-dot" style="background:${SHI_COLORS[shi] || SHI_COLORS[0]}"></div>
+                        <div class="rank-info">
+                            <div class="rank-name">${c.name}</div>
+                            <div class="rank-meta">${c.domain} · 满意度 ${(c.satisfaction || 0).toFixed(1)} · L${shi}</div>
+                        </div>
+                        <div class="rank-value">${(c.revenue || 0).toFixed(1)}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderUsers(snapshot) {
+            const container = document.getElementById('user-body');
+            if (!snapshot || !snapshot.userStates) {
+                container.innerHTML = '<div class="events-empty" style="padding:12px;">等待运行...</div>';
+                return;
+            }
+
+            const users = snapshot.userStates;
+            if (users.length === 0) {
+                container.innerHTML = '<div class="events-empty" style="padding:12px;">无使用者</div>';
+                return;
+            }
+
+            const TYPE_LABELS = { browser: '浏览', citer: '引用', remixer: '改编', spreader: '传播', payer: '付费', disputer: '争议' };
+            const TYPE_COLORS = { browser: '#7a8b82', citer: '#1565c0', remixer: '#e65100', spreader: '#00695c', payer: '#6a1b9a', disputer: '#c62828' };
+
+            container.innerHTML = users.map(u => {
+                const typeLabel = TYPE_LABELS[u.userType] || u.userType;
+                const typeColor = TYPE_COLORS[u.userType] || '#7a8b82';
+                const moodColor = u.mood > 0.3 ? '#4A7C6F' : u.mood < -0.3 ? '#c44536' : '#a0b0a8';
+                const activeText = u.active ? '' : '<span style="font-size:0.65rem;color:#c44536;">[退出]</span>';
+                const rejectBadge = (u.memory?.totalRejections || 0) > 0
+                    ? `<span style="color:#c44536;font-size:0.65rem;">❌${u.memory.totalRejections}</span>`
+                    : '';
+
+                return `
+                    <div style="padding:8px 12px;border-bottom:1px solid rgba(44,62,58,0.06);font-size:0.8rem;cursor:pointer;"
+                         title="${u.name} · 领域:${u.domain}"
+                         onmouseover="this.style.background='rgba(74,124,111,0.04)" onmouseout="this.style.background=''">
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <span style="font-weight:500;">${u.name}</span>
+                            <span style="font-size:0.7rem;color:${typeColor};font-weight:500;">${typeLabel}</span>
+                        </div>
+                        <div style="display:flex;gap:10px;margin-top:3px;font-size:0.7rem;color:var(--ink-light);">
+                            <span>💰 ${(u.wallet || 0).toFixed(1)}</span>
+                            <span style="color:${moodColor};">😊 ${(u.mood || 0).toFixed(1)}</span>
+                            <span>📊 ${(u.memory?.totalEvents || 0)}</span>
+                            ${rejectBadge}
+                            ${activeText}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ─── Metrics ───
+        function updateMetrics(snapshot) {
+            if (!snapshot) return;
+            const m = snapshot.metrics || {};
+            document.getElementById('m-events').textContent = m.totalEvents || 0;
+            document.getElementById('m-revenue').textContent = (m.totalRevenue || 0).toFixed(1);
+            document.getElementById('m-density').textContent = (m.networkDensity || 0).toFixed(3);
+        }
+
+        // ─── Daily Events Chart (stacked bar, cumulative) ───
+        function renderDailyChart() {
+            const container = document.getElementById('daily-chart');
+            container.innerHTML = '';
+            if (!simData || !simData.snapshots) return;
+
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            const margin = { top: 10, right: 10, bottom: 30, left: 30 };
+            const cw = w - margin.left - margin.right;
+            const ch = h - margin.top - margin.bottom;
+
+            const days = d3.range(1, simData.snapshots.length + 1);
+            const types = ['browse', 'cite', 'remix', 'pay', 'spread', 'dispute', 'create'];
+
+            // Count events per day per type
+            const data = days.map(day => {
+                const d = { day };
+                types.forEach(t => { d[t] = 0; });
+                const snapshot = simData.snapshots[day - 1];
+                (snapshot.events || []).forEach(e => {
+                    if (d[e.type] !== undefined) d[e.type]++;
+                });
+                return d;
+            });
+
+            const svg = d3.select('#daily-chart').append('svg').attr('width', w).attr('height', h);
+            const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+            const x = d3.scaleBand().domain(days).range([0, cw]).padding(0.3);
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(data, d => types.reduce((s, t) => s + d[t], 0)) || 1])
+                .range([ch, 0]);
+
+            const stack = d3.stack().keys(types);
+            const series = stack(data);
+
+            g.selectAll('.series').data(series).enter().append('g')
+                .attr('fill', d => EVENT_COLORS[d.key])
+                .selectAll('rect').data(d => d).enter().append('rect')
+                .attr('x', d => x(d.data.day))
+                .attr('y', d => y(d[1]))
+                .attr('height', d => y(d[0]) - y(d[1]))
+                .attr('width', x.bandwidth())
+                .attr('opacity', 0.85);
+
+            g.append('g').attr('transform', `translate(0,${ch})`)
+                .call(d3.axisBottom(x).tickValues(days.filter((d, i) => i % 5 === 0 || i === days.length - 1)).tickFormat(d => d + '天'))
+                .attr('font-size', '10px').attr('color', '#999');
+
+            g.append('g').call(d3.axisLeft(y).ticks(4)).attr('font-size', '10px').attr('color', '#999');
+        }
+
+        // ─── Trend Chart ───
+        function renderTrendChart() {
+            const container = document.getElementById('trend-chart');
+            container.innerHTML = '';
+            if (!simData || !simData.snapshots) return;
+
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            const margin = { top: 10, right: 10, bottom: 30, left: 30 };
+            const cw = w - margin.left - margin.right;
+            const ch = h - margin.top - margin.bottom;
+
+            const svg = d3.select('#trend-chart').append('svg').attr('width', w).attr('height', h);
+            const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+            const days = simData.snapshots.map((s, i) => i + 1);
+            const nCreators = simData.snapshots[0].creatorStates.length;
+
+            const x = d3.scaleLinear().domain([1, days.length]).range([0, cw]);
+            const y = d3.scaleLinear().domain([0, 3.5]).range([ch, 0]);
+
+            // For each creator, build array of shi levels per day
+            for (let ci = 0; ci < nCreators; ci++) {
+                const shiPerDay = simData.snapshots.map(s => (s.creatorStates[ci].shiLevel || 0));
+                const line = d3.line().x((d, i) => x(i + 1)).y(d => y(d));
+                g.append('path').datum(shiPerDay)
+                    .attr('fill', 'none')
+                    .attr('stroke', SHI_COLORS[ci % SHI_COLORS.length])
+                    .attr('stroke-width', 2)
+                    .attr('d', line);
+            }
+
+            g.append('g').attr('transform', `translate(0,${ch})`)
+                .call(d3.axisBottom(x).ticks(Math.min(days.length, 5)).tickFormat(d => d + '天'))
+                .attr('font-size', '10px').attr('color', '#999');
+            g.append('g').call(d3.axisLeft(y).ticks(4).tickFormat(d => 'L' + Math.floor(d)))
+                .attr('font-size', '10px').attr('color', '#999');
+        }
+
+        // ─── Tournament ───
+        async function runTournament() {
+            if (isRunning) return;
+            isRunning = true;
+
+            const cfg = {
+                n_creators: parseInt(document.getElementById('cfg-creators').value) || 6,
+                n_users: parseInt(document.getElementById('cfg-users').value) || 20,
+                duration_days: parseInt(document.getElementById('cfg-days').value) || 30,
+                n_rounds: 10,
+                strategies: ["conservative", "open", "balanced", "strategic"],
+            };
+
+            if (backendChecked && backendAvailable) {
+                showLoading('锦标赛计算中...', '多策略对比 · 10 轮模拟');
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += Math.random() * 6;
+                    if (progress > 85) progress = 85;
+                    setProgress(progress);
+                }, 600);
+
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+                    const response = await fetch(`${API_BASE}/run/tournament`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(cfg),
+                        signal: controller.signal,
+                    });
+                    clearTimeout(timeoutId);
+
+                    if (!response.ok) throw new Error(`后端 ${response.status}`);
+                    const data = await response.json();
+                    clearInterval(progressInterval);
+                    setProgress(100);
+
+                    if (!data.success) throw new Error('后端返回异常');
+
+                    const adapted = { results: {} };
+                    for (const [key, val] of Object.entries(data.results)) {
+                        adapted.results[key] = {
+                            name: val.name || key,
+                            avgRevenue: val.avg_revenue,
+                            avgSatisfaction: val.avg_satisfaction,
+                            avgNetworkDensity: val.avg_network_density,
+                            avgEvents: val.avg_events,
+                        };
+                    }
+                    hideLoading();
+                    showExpPanel('🏆 配置策略锦标赛（后端真实模拟）', renderTournamentHTML(adapted));
+                    showToast('✅ 锦标赛完成', 'info');
+                    isRunning = false;
+                    return;
+                } catch (e) {
+                    clearInterval(progressInterval);
+                    hideLoading();
+                    console.warn('后端锦标赛失败，降级到本地:', e.message);
+                    showToast(`⚠️ 后端不可用 (${e.message})，使用本地演示`, 'warn');
+                    backendAvailable = false;
+                }
+            }
+
+            // ─── Local JS Fallback ───
+            showLoading('本地锦标赛计算中...', '前端演示模式');
+            setProgress(20);
+            await new Promise(r => setTimeout(r, 100));
+
+            try {
+                if (typeof runTournamentJS === 'undefined') {
+                    throw new Error('本地锦标赛引擎未加载');
+                }
+                const localCfg = {
+                    nCreators: cfg.n_creators,
+                    nUsers: cfg.n_users,
+                    durationDays: cfg.duration_days,
+                    nRounds: cfg.n_rounds,
+                };
+                const data = runTournamentJS(localCfg);
+                setProgress(100);
+                hideLoading();
+                showExpPanel('🏆 配置策略锦标赛（本地演示）', renderTournamentHTML(data));
+                showToast('✅ 本地锦标赛完成', 'info');
+            } catch (localErr) {
+                hideLoading();
+                showToast(`❌ 本地锦标赛失败: ${localErr.message}`, 'warn');
+                console.error('本地锦标赛错误:', localErr);
+            }
+
+            isRunning = false;
+        }
+
+        function renderTournamentHTML(data) {
+            const results = data.results;
+            const sorted = Object.entries(results).sort((a, b) => b[1].avgRevenue - a[1].avgRevenue);
+            return `
+                <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+                    <tr style="background:rgba(74,124,111,0.1);">
+                        <th style="padding:8px;text-align:left;">策略</th>
+                        <th style="padding:8px;text-align:right;">平均收入</th>
+                        <th style="padding:8px;text-align:right;">满意度</th>
+                        <th style="padding:8px;text-align:center;">推荐</th>
+                    </tr>
+                    ${sorted.map(([key, s], i) => `
+                        <tr style="border-bottom:1px solid rgba(44,62,58,0.08);">
+                            <td style="padding:8px;"><strong>${s.name}</strong></td>
+                            <td style="padding:8px;text-align:right;">${s.avgRevenue.toFixed(2)}</td>
+                            <td style="padding:8px;text-align:right;">${s.avgSatisfaction.toFixed(2)}</td>
+                            <td style="padding:8px;text-align:center;">${i === 0 ? '⭐' : ''}</td>
+                        </tr>
+                    `).join('')}
+                </table>
+                <p style="margin-top:12px;color:var(--ink-light);font-size:0.8rem;">${sorted[0][1].name} 策略收入最高</p>
+            `;
+        }
+
+        // ─── A/B Test ───
+        async function runABTest() {
+            if (isRunning) return;
+            isRunning = true;
+
+            const cfg = {
+                n_creators: parseInt(document.getElementById('cfg-creators').value) || 6,
+                n_users: parseInt(document.getElementById('cfg-users').value) || 20,
+                duration_days: parseInt(document.getElementById('cfg-days').value) || 30,
+                n_rounds: 10,
+            };
+
+            if (backendChecked && backendAvailable) {
+                showLoading('A/B 实验计算中...', 'ECHO vs 传统平台 · 10 轮对比');
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += Math.random() * 6;
+                    if (progress > 85) progress = 85;
+                    setProgress(progress);
+                }, 600);
+
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+                    const response = await fetch(`${API_BASE}/run/ab`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(cfg),
+                        signal: controller.signal,
+                    });
+                    clearTimeout(timeoutId);
+
+                    if (!response.ok) throw new Error(`后端 ${response.status}`);
+                    const apiData = await response.json();
+                    clearInterval(progressInterval);
+                    setProgress(100);
+
+                    if (!apiData.success) throw new Error('后端返回异常');
+
+                    const adapted = {
+                        echoGroup: {
+                            meanRevenue: apiData.echo_group.mean_revenue,
+                            stdRevenue: apiData.echo_group.std_revenue,
+                        },
+                        controlGroup: {
+                            meanRevenue: apiData.control_group.mean_revenue,
+                            stdRevenue: apiData.control_group.std_revenue,
+                        },
+                        comparison: {
+                            revenueDiff: apiData.comparison.revenue_diff,
+                            revenueDiffPct: apiData.comparison.revenue_diff_pct,
+                        }
+                    };
+                    hideLoading();
+                    showExpPanel('🔬 A/B 对照实验（后端真实模拟）', renderABHTML(adapted));
+                    showToast('✅ A/B 实验完成', 'info');
+                    isRunning = false;
+                    return;
+                } catch (e) {
+                    clearInterval(progressInterval);
+                    hideLoading();
+                    console.warn('后端A/B失败，降级到本地:', e.message);
+                    showToast(`⚠️ 后端不可用 (${e.message})，使用本地演示`, 'warn');
+                    backendAvailable = false;
+                }
+            }
+
+            // ─── Local JS Fallback ───
+            showLoading('本地 A/B 计算中...', '前端演示模式');
+            setProgress(20);
+            await new Promise(r => setTimeout(r, 100));
+
+            try {
+                if (typeof runABExperimentJS === 'undefined') {
+                    throw new Error('本地 A/B 引擎未加载');
+                }
+                const localCfg = {
+                    nCreators: cfg.n_creators,
+                    nUsers: cfg.n_users,
+                    durationDays: cfg.duration_days,
+                    nRounds: cfg.n_rounds,
+                };
+                const data = runABExperimentJS(localCfg);
+                setProgress(100);
+                hideLoading();
+                showExpPanel('🔬 A/B 对照实验（本地演示）', renderABHTML(data));
+                showToast('✅ 本地 A/B 完成', 'info');
+            } catch (localErr) {
+                hideLoading();
+                showToast(`❌ 本地 A/B 失败: ${localErr.message}`, 'warn');
+                console.error('本地 A/B 错误:', localErr);
+            }
+
+            isRunning = false;
+        }
+
+        function renderABHTML(data) {
+            const echo = data.echoGroup;
+            const control = data.controlGroup;
+            const diff = data.comparison;
+            return `
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+                    <div style="background:rgba(74,124,111,0.08);padding:16px;border-radius:8px;text-align:center;">
+                        <div style="font-size:0.75rem;color:var(--ink-medium);margin-bottom:4px;">ECHO 组</div>
+                        <div style="font-size:1.5rem;font-weight:600;color:var(--ink-medium);">${echo.meanRevenue.toFixed(1)}</div>
+                        <div style="font-size:0.7rem;color:#999;">±${echo.stdRevenue.toFixed(1)}</div>
+                    </div>
+                    <div style="background:rgba(196,69,54,0.08);padding:16px;border-radius:8px;text-align:center;">
+                        <div style="font-size:0.75rem;color:var(--vermilion);margin-bottom:4px;">对照组</div>
+                        <div style="font-size:1.5rem;font-weight:600;color:var(--vermilion);">${control.meanRevenue.toFixed(1)}</div>
+                        <div style="font-size:0.7rem;color:#999;">±${control.stdRevenue.toFixed(1)}</div>
+                    </div>
+                </div>
+                <div style="background:rgba(74,124,111,0.1);padding:12px;border-radius:8px;font-size:0.85rem;">
+                    ECHO 组比对照组 <strong>${diff.revenueDiff > 0 ? '高' : '低'} ${Math.abs(diff.revenueDiff).toFixed(2)}</strong>
+                    （${diff.revenueDiffPct > 0 ? '+' : ''}${diff.revenueDiffPct}%）
+                </div>
+            `;
+        }
+
+        // ─── Helpers ───
+        function setBtnLoading(id, loading, text) {
+            const btn = document.getElementById(id);
+            btn.disabled = loading;
+            btn.textContent = text;
+            btn.style.opacity = loading ? '0.7' : '1';
+        }
+
+        function showExpPanel(title, html) {
+            document.getElementById('exp-title').textContent = title;
+            document.getElementById('exp-content').innerHTML = html;
+            document.getElementById('exp-panel').style.display = 'block';
+            document.getElementById('exp-overlay').style.display = 'block';
+        }
+
+        function closeExpPanel() {
+            document.getElementById('exp-panel').style.display = 'none';
+            document.getElementById('exp-overlay').style.display = 'none';
+        }
+
+        // ─── Auto-run on load ───
+        window.addEventListener('load', () => {
+            initApp();
+            runSimulation();
+        });
+
+        // Handle resize
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                if (simData) {
+                    renderDay();
+                    renderDailyChart();
+                    renderTrendChart();
+                }
+            }, 200);
+        });
+    </script>
+</body>
+</html>
