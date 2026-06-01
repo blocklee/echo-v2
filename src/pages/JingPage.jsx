@@ -1,25 +1,140 @@
+import { useRef, useEffect, useState } from 'react';
+import { checkVersionCompatibility, ALPHA_7_CONSTRAINT } from '../utils/versionCompat';
+
+const CURRENT_ECHO_VERSION = '1.1.0';
+
+const PHASES = [
+  { name: '纳相', desc: '争议受理', shiPosition: 0 },
+  { name: '展相', desc: '证据展示', shiPosition: 1 },
+  { name: '照相', desc: '观点对照', shiPosition: 2 },
+  { name: '议相', desc: '群体审议', shiPosition: 3 },
+  { name: '决相', desc: '共识裁决', shiPosition: 4 },
+  { name: '映相', desc: '结果映现', shiPosition: 5 },
+];
+
+const MOCK_POTENTIAL_HISTORY = [
+  { timestamp: 1748758400, potentialValue: 0.42, phase: '纳相', shiPosition: 0 },
+  { timestamp: 1748760000, potentialValue: 0.51, phase: '纳相', shiPosition: 0 },
+  { timestamp: 1748761600, potentialValue: 0.48, phase: '展相', shiPosition: 1 },
+  { timestamp: 1748763200, potentialValue: 0.63, phase: '展相', shiPosition: 1 },
+  { timestamp: 1748764800, potentialValue: 0.59, phase: '照相', shiPosition: 2 },
+  { timestamp: 1748766400, potentialValue: 0.71, phase: '照相', shiPosition: 2 },
+  { timestamp: 1748768000, potentialValue: 0.68, phase: '议相', shiPosition: 3 },
+  { timestamp: 1748769600, potentialValue: 0.75, phase: '议相', shiPosition: 3 },
+  { timestamp: 1748771200, potentialValue: 0.73, phase: '决相', shiPosition: 4 },
+  { timestamp: 1748772800, potentialValue: 0.80, phase: '映相', shiPosition: 5 },
+];
+
+const MOCK_EDGES = [
+  { fromNode: '0x86ca...', toNode: '0x16ce...', versionConstraint: { minVersion: '1.0', maxVersion: '2.0', constraintType: 'range', declaredAtBlock: 2704473 } },
+  { fromNode: '0x16ce...', toNode: '0xc6a7...', versionConstraint: { minVersion: '1.0', maxVersion: '1.9', constraintType: 'range', declaredAtBlock: 2704500 } },
+];
+
+function PotentialChart({ history }) {
+  const canvasRef = useRef(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !history || history.length === 0) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.offsetWidth;
+    const h = canvas.offsetHeight;
+    ctx.clearRect(0, 0, w, h);
+    const max = Math.max(...history.map(h => h.potentialValue));
+    const min = Math.min(...history.map(h => h.potentialValue));
+    const range = max - min || 0.01;
+    // 淡墨网格
+    ctx.strokeStyle = 'rgba(168,163,154,0.2)';
+    ctx.lineWidth = 0.5;
+    for (let i = 1; i < 5; i++) {
+      const y = (i / 5) * h;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+    // 心电图折线 - 朱砂色
+    ctx.beginPath();
+    ctx.strokeStyle = '#c45c48';
+    ctx.lineWidth = 2;
+    history.forEach((pt, i) => {
+      const x = (i / (history.length - 1)) * w;
+      const y = (1 - (pt.potentialValue - min) / range) * h;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    // 节点
+    history.forEach((pt, i) => {
+      const x = (i / (history.length - 1)) * w;
+      const y = (1 - (pt.potentialValue - min) / range) * h;
+      ctx.beginPath();
+      ctx.fillStyle = '#c45c48';
+      ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }, [history]);
+  return <canvas ref={canvasRef} className="w-full h-28 bg-[#faf9f7] rounded" />;
+}
+
+function EdgeList({ edges }) {
+  if (!edges || edges.length === 0) return <div className="text-[#6b6b6b]">无边数据</div>;
+  return (
+    <div className="space-y-2">
+      {edges.map((e, i) => {
+        const compat = e.versionConstraint
+          ? checkVersionCompatibility(CURRENT_ECHO_VERSION, e.versionConstraint)
+          : null;
+        return (
+          <div key={i} className={`bg-[#faf9f7] rounded border p-3 text-sm ${compat?.compatible === false ? 'border-red-300' : 'border-[#e5e2dc]'}`}>
+            <div className="flex justify-between mb-1">
+              <span className="text-[#6b6b6b]">{e.fromNode.slice(0,8)}… → {e.toNode.slice(0,8)}…</span>
+              {compat && (
+                <span className={`text-xs ${compat.compatible ? 'text-emerald-600' : 'text-red-500'}`}>
+                  {compat.compatible ? '✅ 兼容' : `❌ ${compat.reason}`}
+                </span>
+              )}
+            </div>
+            {e.versionConstraint && (
+              <div className="text-xs text-[#c45c48]">
+                v{e.versionConstraint.minVersion}~v{e.versionConstraint.maxVersion}
+                <span className="text-[#6b6b6b] ml-2">({e.versionConstraint.constraintType})</span>
+                <span className="text-[#9a9a9a] ml-2">blk#{e.versionConstraint.declaredAtBlock}</span>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function JingPage() {
-  const phases = [
-    { name: '纳相', desc: '争议受理', active: true },
-    { name: '展相', desc: '证据展示', active: false },
-    { name: '照相', desc: '观点对照', active: false },
-    { name: '议相', desc: '群体审议', active: false },
-    { name: '决相', desc: '共识裁决', active: false },
-    { name: '映相', desc: '结果映现', active: false },
-  ];
+  const [activePhase, setActivePhase] = useState(null);
+  const [chartData] = useState(MOCK_POTENTIAL_HISTORY);
+  const [edgeData] = useState(MOCK_EDGES);
   return (
     <div className="min-h-screen bg-[#faf9f7] text-[#1a1a1a] p-8">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-4 text-[#1a1a1a]">境 — 争议之势</h1>
-        <p className="text-[#6b6b6b] mb-8">此处展示六相动态与势位流转，案由如川，共识如流。</p>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {phases.map((p, i) => (
-            <div key={i} className={`card transition-all duration-300 hover:border-emerald-700/50 ${p.active ? 'border-emerald-600/50 bg-emerald-50' : ''}`}>
-              <div className="text-lg font-bold mb-1 text-[#1a1a1a]">{p.name}</div>
-              <div className="text-sm text-[#6b6b6b]">{p.desc}</div>
-              <div className="mt-2 text-xs text-[#c45c48]">{p.active ? '进行中' : '待开启'}</div>
+      <div className="max-w-5xl mx-auto">
+        <h1 className="text-3xl font-bold mb-2 text-[#1a1a1a]">境 — 争议之势</h1>
+        <p className="text-[#6b6b6b] mb-6">势位如川，共识如流。六相呼吸，动态呈现。</p>
+        <div className="mb-6"><PotentialChart history={chartData} /></div>
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-6">
+          {PHASES.map((p) => (
+            <div key={p.shiPosition} onClick={() => setActivePhase(activePhase === p.shiPosition ? null : p.shiPosition)}
+              className={`cursor-pointer rounded p-3 text-center transition-all duration-200 border ${activePhase === p.shiPosition ? 'border-[#c45c48] bg-[#c45c48]/5' : 'border-[#e5e2dc] bg-white hover:border-[#d4d0c8]'}`}>
+              <div className="text-lg font-bold text-[#1a1a1a]">{p.name}</div>
+              <div className="text-xs text-[#6b6b6b]">{p.desc}</div>
+              <div className="text-xs text-[#c45c48] mt-1">相位{p.shiPosition}</div>
             </div>
           ))}
+        </div>
+        <div className="mb-6"><div className="text-sm text-[#6b6b6b] mb-2">边 — 伦理承诺的技术肉身</div><EdgeList edges={edgeData} /></div>
+        <div className="bg-white rounded border border-[#e5e2dc] p-4">
+          <div className="text-sm text-[#6b6b6b] mb-3">节点四权配置</div>
+          <div className="grid grid-cols-4 gap-4">
+            {['usage','derive','expand','benefit'].map(right => (
+              <div key={right} className="text-center">
+                <div className="text-xs text-[#6b6b6b] uppercase mb-1">{right}</div>
+                <div className="text-2xl font-bold text-[#1a1a1a]">{chartData[chartData.length-1]?.potentialValue || '—'}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

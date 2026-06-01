@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
   color-scheme: light;
 }
 
@@ -14,21 +14,21 @@ body {
   color: #1a1a1a;
 }
 
-/* Rice paper warm white theme */
+/* Xuan paper theme - merged from both agents */
 .card {
-  @apply bg-white rounded-lg p-6 border border-stone-200 shadow-sm;
+  @apply rounded-lg p-6 border border-[#e5e2dc] bg-[#faf9f7];
 }
 
 .btn-primary {
-  @apply bg-stone-800 hover:bg-stone-700 text-white px-4 py-2 rounded-lg transition-colors;
+  @apply bg-[#1a1a1a] hover:bg-[#4a4a4a] text-[#faf9f7] px-4 py-2 rounded-lg transition-colors;
 }
 
 .btn-commit {
-  @apply bg-stone-700 hover:bg-stone-600 text-white px-4 py-2 rounded-lg transition-colors;
+  @apply bg-[#c45c48] hover:bg-[#a34a38] text-[#faf9f7] px-4 py-2 rounded-lg transition-colors;
 }
 
 .btn-reveal {
-  @apply bg-stone-600 hover:bg-stone-500 text-white px-4 py-2 rounded-lg transition-colors;
+  @apply bg-[#4a4a4a] hover:bg-[#6a6a6a] text-[#faf9f7] px-4 py-2 rounded-lg transition-colors;
 }
 
 .status-badge {
@@ -36,18 +36,18 @@ body {
 }
 
 .status-commit {
-  @apply bg-amber-100 text-amber-800 border border-amber-200;
+  @apply bg-[#c45c48]/10 text-[#c45c48];
 }
 
 .status-reveal {
-  @apply bg-stone-100 text-stone-700 border border-stone-200;
+  @apply bg-[#4a4a4a]/10 text-[#4a4a4a];
 }
 
 .status-resolved {
-  @apply bg-emerald-50 text-emerald-700 border border-emerald-200;
+  @apply bg-[#1a1a1a]/10 text-[#1a1a1a];
 }
 
-/* Accent color - Cinnabar red for primary actions */
+/* Accent colors */
 .accent-cinnabar {
   color: #c45c48;
 }
@@ -60,7 +60,6 @@ body {
   border-color: #c45c48;
 }
 
-/* Indigo accent for secondary */
 .accent-indigo {
   color: #3b5998;
 }
@@ -81,7 +80,7 @@ h1, h2, h3 {
 
 /* Hover states for cards */
 .card-hover:hover {
-  @apply border-stone-300 shadow-md;
+  @apply border-[#d4d0c8] shadow-md;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
