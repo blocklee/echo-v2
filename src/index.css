@@ -3,31 +3,32 @@
 @tailwind utilities;
 
 :root {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  color-scheme: dark;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  color-scheme: light;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background: #1a1a1a;
+  background: #faf9f7;
+  color: #1a1a1a;
 }
 
-/* Dark matte styling */
+/* Xuan paper theme */
 .card {
-  @apply bg-neutral-900 rounded-lg p-6 border border-neutral-800;
+  @apply rounded-lg p-6 border border-[#e5e2dc] bg-[#faf9f7];
 }
 
 .btn-primary {
-  @apply bg-neutral-700 hover:bg-neutral-600 text-white px-4 py-2 rounded-lg transition-colors;
+  @apply bg-[#1a1a1a] hover:bg-[#4a4a4a] text-[#faf9f7] px-4 py-2 rounded-lg transition-colors;
 }
 
 .btn-commit {
-  @apply bg-green-700 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors;
+  @apply bg-[#c45c48] hover:bg-[#a34a38] text-[#faf9f7] px-4 py-2 rounded-lg transition-colors;
 }
 
 .btn-reveal {
-  @apply bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors;
+  @apply bg-[#4a4a4a] hover:bg-[#6a6a6a] text-[#faf9f7] px-4 py-2 rounded-lg transition-colors;
 }
 
 .status-badge {
@@ -35,13 +36,13 @@ body {
 }
 
 .status-commit {
-  @apply bg-yellow-900 text-yellow-200;
+  @apply bg-[#c45c48]/10 text-[#c45c48];
 }
 
 .status-reveal {
-  @apply bg-blue-900 text-blue-200;
+  @apply bg-[#4a4a4a]/10 text-[#4a4a4a];
 }
 
 .status-resolved {
-  @apply bg-green-900 text-green-200;
+  @apply bg-[#1a1a1a]/10 text-[#1a1a1a];
 }
