@@ -16,14 +16,21 @@ function PotentialChart({ history }) {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !history || history.length === 0) return;
+    const parent = canvas.parentElement;
+    if (!parent) return;
+    const w = parent.clientWidth;
+    const h = 112; // 28 * 4 (tailwind h-28 = 7rem = 112px)
+    canvas.width = w * 2; // retina
+    canvas.height = h * 2;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
     const ctx = canvas.getContext('2d');
-    const w = canvas.offsetWidth;
-    const h = canvas.offsetHeight;
+    ctx.scale(2, 2);
     ctx.clearRect(0, 0, w, h);
 
-    const values = history.map(h => h.potential || h.potentialValue);
-    const max = Math.max(...values);
-    const min = Math.min(...values);
+    const values = history.map(h => h.potential || h.potentialValue || 0);
+    const max = Math.max(...values, 0.01);
+    const min = Math.min(...values, 0);
     const range = max - min || 0.01;
 
     // 淡墨网格
@@ -45,7 +52,7 @@ function PotentialChart({ history }) {
     });
     ctx.stroke();
 
-    // 节点
+    // 节点圆点
     values.forEach((v, i) => {
       const x = (i / (values.length - 1)) * w;
       const y = (1 - (v - min) / range) * h;
@@ -54,9 +61,21 @@ function PotentialChart({ history }) {
       ctx.arc(x, y, 3, 0, Math.PI * 2);
       ctx.fill();
     });
+
+    // 数据点标注
+    if (values.length <= 10) {
+      ctx.fillStyle = '#78716c';
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'center';
+      values.forEach((v, i) => {
+        const x = (i / (values.length - 1)) * w;
+        const y = (1 - (v - min) / range) * h;
+        ctx.fillText(v.toFixed(2), x, y - 8);
+      });
+    }
   }, [history]);
 
-  return <canvas ref={canvasRef} className="w-full h-28 bg-stone-50 rounded" />;
+  return <div className="w-full h-28"><canvas ref={canvasRef} className="w-full h-full bg-stone-50 rounded" /></div>;
 }
 
 function EdgeList({ edges }) {
@@ -100,20 +119,63 @@ export default function JingPage() {
   const [activePhase, setActivePhase] = useState(null);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/potential`)
-      .then(r => r.json())
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000); // 8s timeout
+
+    fetch(`${API_BASE}/api/potential`, { signal: ctrl.signal })
+      .then(r => {
+        clearTimeout(timer);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then(data => {
         setNodes(data.nodes || []);
         setLoading(false);
       })
       .catch(err => {
-        setError(err.message);
+        clearTimeout(timer);
+        if (err.name === 'AbortError') {
+          setError('API 请求超时（8秒），后端响应太慢。请刷新重试。');
+        } else {
+          setError(err.message);
+        }
         setLoading(false);
       });
+
+    return () => { clearTimeout(timer); ctrl.abort(); };
   }, []);
 
-  if (loading) return <div className="min-h-screen bg-stone-50 text-stone-900 p-8">加载中…</div>;
-  if (error) return <div className="min-h-screen bg-stone-50 text-stone-900 p-8 text-red-500">错误：{error}</div>;
+  if (loading) return (
+    <div className="min-h-screen bg-stone-50 text-stone-900 p-8">
+      <div className="max-w-5xl mx-auto">
+        <h1 className="text-3xl font-bold mb-2 text-stone-900">境 — 争议之势</h1>
+        <p className="text-stone-500 mb-6">势位如川，共识如流。六相呼吸，动态呈现。</p>
+        <div className="text-stone-400 mb-4">加载节点数据中…</div>
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-6">
+          {PHASES.map((p) => (
+            <div key={p.shiPosition} className="rounded p-3 text-center border border-stone-200 bg-white opacity-50">
+              <div className="text-lg font-bold text-stone-800">{p.name}</div>
+              <div className="text-xs text-stone-400">{p.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+  if (error) return (
+    <div className="min-h-screen bg-stone-50 text-stone-900 p-8">
+      <div className="max-w-5xl mx-auto">
+        <h1 className="text-3xl font-bold mb-2 text-stone-900">境 — 争议之势</h1>
+        <p className="text-stone-500 mb-6">势位如川，共识如流。六相呼吸，动态呈现。</p>
+        <div className="bg-red-50 border border-red-200 rounded p-4 text-red-600 mb-4">
+          <div className="font-bold mb-2">API 错误</div>
+          <div>{error}</div>
+        </div>
+        <div className="text-stone-400 text-sm">后端 API 地址：{API_BASE}/api/potential</div>
+        <div className="text-stone-400 text-sm">可能原因：后端响应慢（2.8秒）、网络不通、CORS 配置异常。</div>
+      </div>
+    </div>
+  );
   if (nodes.length === 0) return <div className="min-h-screen bg-stone-50 text-stone-900 p-8">无节点数据</div>;
 
   // 全量 potentialHistory 用于心电图（所有节点合并）
