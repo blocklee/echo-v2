@@ -1,4 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
+import { checkVersionCompatibility, ALPHA_7_CONSTRAINT } from '../utils/versionCompat';
+
+const CURRENT_ECHO_VERSION = '1.1.0';
 
 const PHASES = [
   { name: '纳相', desc: '争议受理', shiPosition: 0 },
@@ -73,12 +76,30 @@ function EdgeList({ edges }) {
   if (!edges || edges.length === 0) return <div className="text-stone-400">无边数据</div>;
   return (
     <div className="space-y-2">
-      {edges.map((e, i) => (
-        <div key={i} className="bg-stone-50 rounded border border-stone-200 p-3 text-sm">
-          <div className="flex justify-between mb-1"><span className="text-stone-500">{e.fromNode.slice(0,8)}… → {e.toNode.slice(0,8)}…</span></div>
-          {e.versionConstraint && <div className="text-xs text-red-400">v{e.versionConstraint.minVersion}~v{e.versionConstraint.maxVersion}<span className="text-stone-400 ml-2">({e.versionConstraint.constraintType})</span><span className="text-stone-300 ml-2">blk#{e.versionConstraint.declaredAtBlock}</span></div>}
-        </div>
-      ))}
+      {edges.map((e, i) => {
+        const compat = e.versionConstraint
+          ? checkVersionCompatibility(CURRENT_ECHO_VERSION, e.versionConstraint)
+          : null;
+        return (
+          <div key={i} className={`bg-stone-50 rounded border p-3 text-sm ${compat?.compatible === false ? 'border-red-300' : 'border-stone-200'}`}>
+            <div className="flex justify-between mb-1">
+              <span className="text-stone-500">{e.fromNode.slice(0,8)}… → {e.toNode.slice(0,8)}…</span>
+              {compat && (
+                <span className={`text-xs ${compat.compatible ? 'text-emerald-600' : 'text-red-500'}`}>
+                  {compat.compatible ? '✅ 兼容' : `❌ ${compat.reason}`}
+                </span>
+              )}
+            </div>
+            {e.versionConstraint && (
+              <div className="text-xs text-red-400">
+                v{e.versionConstraint.minVersion}~v{e.versionConstraint.maxVersion}
+                <span className="text-stone-400 ml-2">({e.versionConstraint.constraintType})</span>
+                <span className="text-stone-300 ml-2">blk#{e.versionConstraint.declaredAtBlock}</span>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
