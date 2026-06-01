@@ -276,7 +276,7 @@ export default function JingPage() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mb-2">
                     <div>
                       <div className="text-xs text-[#9a9a9a]">当前势值</div>
-                      <div className="font-bold text-[#c45c48]">{node.potential?.toFixed ? node.potential.toFixed(2) : node.potential}</div>
+                      <div className="font-bold text-[#c45c48]">{typeof node.potential === 'number' ? node.potential.toFixed(2) : typeof node.potential === 'string' ? node.potential : JSON.stringify(node.potential ?? null)}</div>
                     </div>
                     <div>
                       <div className="text-xs text-[#9a9a9a]">相位</div>
@@ -288,7 +288,7 @@ export default function JingPage() {
                     </div>
                     <div>
                       <div className="text-xs text-[#9a9a9a]">触发</div>
-                      <div className="font-bold">{node.nextPhaseTrigger ?? '—'}</div>
+                      <div className="font-bold">{typeof node.nextPhaseTrigger === 'string' ? node.nextPhaseTrigger : typeof node.nextPhaseTrigger === 'number' ? String(node.nextPhaseTrigger) : JSON.stringify(node.nextPhaseTrigger ?? null)}</div>
                     </div>
                   </div>
                   {node.creator && (
@@ -320,7 +320,7 @@ export default function JingPage() {
             {['usage', 'derive', 'expand', 'benefit'].map(right => (
               <div key={right} className="text-center">
                 <div className="text-xs text-[#6b6b6b] uppercase mb-1">{right}</div>
-                <div className="text-2xl font-bold text-[#1a1a1a]">{fourRights[right] ?? '—'}</div>
+                <div className="text-2xl font-bold text-[#1a1a1a]">{typeof fourRights[right] === 'string' || typeof fourRights[right] === 'number' ? fourRights[right] : JSON.stringify(fourRights[right] ?? null)}</div>
               </div>
             ))}
           </div>
