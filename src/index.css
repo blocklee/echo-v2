@@ -3,31 +3,32 @@
 @tailwind utilities;
 
 :root {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  color-scheme: dark;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif;
+  color-scheme: light;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background: #1a1a1a;
+  background: #faf9f7;
+  color: #1a1a1a;
 }
 
-/* Dark matte styling */
+/* Rice paper warm white theme */
 .card {
-  @apply bg-neutral-900 rounded-lg p-6 border border-neutral-800;
+  @apply bg-white rounded-lg p-6 border border-stone-200 shadow-sm;
 }
 
 .btn-primary {
-  @apply bg-neutral-700 hover:bg-neutral-600 text-white px-4 py-2 rounded-lg transition-colors;
+  @apply bg-stone-800 hover:bg-stone-700 text-white px-4 py-2 rounded-lg transition-colors;
 }
 
 .btn-commit {
-  @apply bg-green-700 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors;
+  @apply bg-stone-700 hover:bg-stone-600 text-white px-4 py-2 rounded-lg transition-colors;
 }
 
 .btn-reveal {
-  @apply bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors;
+  @apply bg-stone-600 hover:bg-stone-500 text-white px-4 py-2 rounded-lg transition-colors;
 }
 
 .status-badge {
@@ -35,13 +36,69 @@ body {
 }
 
 .status-commit {
-  @apply bg-yellow-900 text-yellow-200;
+  @apply bg-amber-100 text-amber-800 border border-amber-200;
 }
 
 .status-reveal {
-  @apply bg-blue-900 text-blue-200;
+  @apply bg-stone-100 text-stone-700 border border-stone-200;
 }
 
 .status-resolved {
-  @apply bg-green-900 text-green-200;
+  @apply bg-emerald-50 text-emerald-700 border border-emerald-200;
+}
+
+/* Accent color - Cinnabar red for primary actions */
+.accent-cinnabar {
+  color: #c45c48;
+}
+
+.bg-accent-cinnabar {
+  background-color: #c45c48;
+}
+
+.border-accent-cinnabar {
+  border-color: #c45c48;
+}
+
+/* Indigo accent for secondary */
+.accent-indigo {
+  color: #3b5998;
+}
+
+/* Typography refinements */
+h1, h2, h3 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.text-muted {
+  color: #6b6b6b;
+}
+
+.text-faint {
+  color: #9a9a9a;
+}
+
+/* Hover states for cards */
+.card-hover:hover {
+  @apply border-stone-300 shadow-md;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d4d0c8;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #b8b4ac;
 }
