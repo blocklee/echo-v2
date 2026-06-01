@@ -32,7 +32,7 @@ export default function JingCompPage() {
               <button onClick={() => setRound(round + 1)} className="btn-primary">下一轮</button>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
             <div className="bg-stone-50 p-4 rounded text-center">
               <div className="text-2xl font-bold text-[#c45c48]">5</div>
               <div className="text-sm text-[#6b6b6b]">参与方</div>

@@ -127,7 +127,7 @@ export default function JingPage() {
         <div className="mb-6"><div className="text-sm text-[#6b6b6b] mb-2">边 — 伦理承诺的技术肉身</div><EdgeList edges={edgeData} /></div>
         <div className="bg-white rounded border border-[#e5e2dc] p-4">
           <div className="text-sm text-[#6b6b6b] mb-3">节点四权配置</div>
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {['usage','derive','expand','benefit'].map(right => (
               <div key={right} className="text-center">
                 <div className="text-xs text-[#6b6b6b] uppercase mb-1">{right}</div>
