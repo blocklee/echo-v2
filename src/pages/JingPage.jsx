@@ -176,7 +176,15 @@ export default function JingPage() {
       </div>
     </div>
   );
-  if (nodes.length === 0) return <div className="min-h-screen bg-stone-50 text-stone-900 p-8">无节点数据</div>;
+  if (nodes.length === 0) return (
+    <div className="min-h-screen bg-stone-50 text-stone-900 p-8">
+      <div className="max-w-5xl mx-auto">
+        <h1 className="text-3xl font-bold mb-2 text-stone-900">境 — 争议之势</h1>
+        <p className="text-stone-500 mb-6">势位如川，共识如流。六相呼吸，动态呈现。</p>
+        <div className="text-stone-400">无节点数据</div>
+      </div>
+    </div>
+  );
 
   // 全量 potentialHistory 用于心电图（所有节点合并）
   const allHistory = nodes.flatMap(n => (n.potentialHistory || []).map(h => ({
@@ -237,6 +245,57 @@ export default function JingPage() {
             );
           })}
         </div>
+
+        {phaseNodes.length > 0 && (
+          <div className="mb-6">
+            <div className="text-sm text-stone-600 mb-2">
+              {activePhase !== null ? `${PHASE_NAMES[activePhase]} 节点` : '全部节点'}
+              <span className="text-stone-400 ml-2">（{phaseNodes.length} 个）</span>
+            </div>
+            <div className="space-y-3">
+              {phaseNodes.map((node, i) => (
+                <div key={node.nodeId || i} className="bg-white rounded border border-stone-200 p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="text-sm font-bold text-stone-800">
+                      节点 {i + 1} · {node.nodeId?.slice(0, 16)}…
+                    </div>
+                    <div className={`text-xs px-2 py-1 rounded ${node.phase === 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-stone-100 text-stone-500'}`}>
+                      {PHASE_NAMES[node.phase ?? 0]} · 势位 {node.shiPosition ?? node.phase ?? 0}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mb-2">
+                    <div>
+                      <div className="text-xs text-stone-400">当前势值</div>
+                      <div className="font-bold text-red-600">{node.potential?.toFixed ? node.potential.toFixed(2) : node.potential}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-stone-400">相位</div>
+                      <div className="font-bold">{PHASE_NAMES[node.phase ?? 0]}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-stone-400">势位</div>
+                      <div className="font-bold">{node.shiPosition ?? node.phase ?? 0}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-stone-400">触发</div>
+                      <div className="font-bold">{node.nextPhaseTrigger ?? '—'}</div>
+                    </div>
+                  </div>
+                  {node.creator && (
+                    <div className="text-xs text-stone-400">
+                      创建者：{node.creator}
+                    </div>
+                  )}
+                  {node.edges && node.edges.length > 0 && (
+                    <div className="text-xs text-stone-400 mt-1">
+                      出边：{node.edges.length} 条 → {node.edges.map(e => e.toNode?.slice(0, 8) || '?').join(', ')}…
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {edges.length > 0 && (
           <div className="mb-6">
