@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { BrowserProvider } from 'ethers';
 import { CONTRACTS, CHAIN_ID, CHAIN_NAME } from '../contracts/config';
 
@@ -12,59 +12,51 @@ export function useWallet() {
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState(null);
 
+  const refreshBalance = useCallback(async (web3Provider, addr) => {
+    if (!web3Provider || !addr) return;
+    try {
+      const balanceWei = await web3Provider.getBalance(addr);
+      setBalance(Number(balanceWei) / 1e18);
+    } catch (e) {
+      console.error('refreshBalance failed:', e);
+    }
+  }, []);
+
   const connect = useCallback(async () => {
     setConnecting(true);
     setError(null);
-    
     try {
-      // Check for ethereum window object
       if (!window.ethereum) {
         throw new Error('No wallet detected. Please install MetaMask or a Qitmeer-compatible wallet.');
       }
-      
-      // Request account access
-      const accounts = await window.ethereum.request({ 
-        method: 'eth_requestAccounts' 
-      });
-      
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
       if (!accounts || accounts.length === 0) {
         throw new Error('No accounts found. Please unlock your wallet.');
       }
-      
       const addr = accounts[0];
-      
-      // Create ethers provider
       const web3Provider = new BrowserProvider(window.ethereum);
       const web3Signer = await web3Provider.getSigner();
-      
-      // Get network
       const network = await web3Provider.getNetwork();
-      
-      // Check if correct chain
       if (Number(network.chainId) !== CHAIN_ID) {
         console.warn(`Connected to chain ${network.chainId}, expected ${CHAIN_ID} (${CHAIN_NAME})`);
       }
-      
-      // Get balance
-      const balanceWei = await web3Provider.getBalance(addr);
-      const balanceFormatted = Number(balanceWei) / 1e18;
-      
+      await refreshBalance(web3Provider, addr);
       setProvider(web3Provider);
       setSigner(web3Signer);
       setAddress(addr);
-      setBalance(balanceFormatted);
-      
-      console.log('Wallet connected:', addr, 'Balance:', balanceFormatted, 'MEER');
-      
+      console.log('Wallet connected:', addr);
     } catch (err) {
       console.error('Wallet connection error:', err);
       setError(err.message || 'Failed to connect wallet');
     } finally {
       setConnecting(false);
     }
-  }, []);
+  }, [refreshBalance]);
 
   const disconnect = useCallback(() => {
+    if (window.ethereum?.removeAllListeners) {
+      try { window.ethereum.removeAllListeners(); } catch (e) {}
+    }
     setProvider(null);
     setSigner(null);
     setAddress(null);
@@ -74,28 +66,20 @@ export function useWallet() {
 
   const switchToQitmeer = useCallback(async () => {
     if (!window.ethereum) return;
-    
+    const chainIdHex = '0x' + CHAIN_ID.toString(16);
     try {
-      await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: '0x' + CHAIN_ID.toString(16) }], // 0x32D = 813
-      });
+      await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: chainIdHex }] });
     } catch (switchError) {
-      // Chain not added, try adding
       if (switchError.code === 4902) {
         try {
           await window.ethereum.request({
             method: 'wallet_addEthereumChain',
             params: [{
-              chainId: '0x32D',
+              chainId: chainIdHex,
               chainName: CHAIN_NAME,
-              rpcUrls: ['https://qng.rpc.qitmeer.io'],
+              rpcUrls: [QITMEER_RPC],
               blockExplorerUrls: ['https://qng.meerscan.io'],
-              nativeCurrency: {
-                name: 'MEER',
-                symbol: 'MEER',
-                decimals: 18,
-              },
+              nativeCurrency: { name: 'MEER', symbol: 'MEER', decimals: 18 },
             }],
           });
         } catch (addError) {
@@ -105,33 +89,29 @@ export function useWallet() {
     }
   }, []);
 
-  // Listen for account changes
-  if (window.ethereum && !window.ethereum._eventsBound) {
-    window.ethereum.on('accountsChanged', (accounts) => {
+  useEffect(() => {
+    if (!window.ethereum) return;
+    const handleAccountsChanged = (accounts) => {
       if (accounts.length === 0) {
         disconnect();
       } else {
         setAddress(accounts[0]);
+        if (provider) refreshBalance(provider, accounts[0]);
       }
-    });
-    
-    window.ethereum.on('chainChanged', () => {
-      window.location.reload();
-    });
-    
-    window.ethereum._eventsBound = true;
-  }
+    };
+    const handleChainChanged = () => {
+      if (provider) refreshBalance(provider, address).catch(() => {});
+    };
+    window.ethereum.on('accountsChanged', handleAccountsChanged);
+    window.ethereum.on('chainChanged', handleChainChanged);
+    return () => {
+      window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+      window.ethereum.removeListener('chainChanged', handleChainChanged);
+    };
+  }, [provider, address, disconnect, refreshBalance]);
 
   return {
-    provider,
-    signer,
-    address,
-    balance,
-    connecting,
-    error,
-    connect,
-    disconnect,
-    switchToQitmeer,
-    isConnected: !!address,
+    provider, signer, address, balance, connecting, error,
+    connect, disconnect, switchToQitmeer, isConnected: !!address,
   };
 }
