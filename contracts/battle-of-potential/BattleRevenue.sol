@@ -5,30 +5,38 @@ import "./DeckAssembly.sol";
 
 /**
  * @title BattleRevenue
- * @notice ECHO: Battle of Potential — 对战分账合约
- * @dev 分账逻辑基于猫先森 v0.1 经济参数（2026-06-02 11:00 确认）
- * 分层分账：先扣山门30%+升级池20%，剩余50%按创作者/编排者/审查员/公共池/系统/大使分配
+ * @notice ECHO: Battle of Potential — 对战分账合约（对战层，单层100%）
+ * @dev 基于猫先森 v0.1 经济参数 + 架构分层（2026-06-02 12:26 确认）
+ * 
+ * 对战层分账（单层，100%）：
+ *   创作者 45% | 编排者 25% | 审查员 8% | 公共池 8% | 系统 5% | 大使 5% | 储备 4%
+ *   总和 = 45+25+8+8+5+5+4 = 100% ✓
+ * 
+ * 项目层分账（山门30%+升级池20%）移到 Treasury/DAO 合约，不在本合约处理。
  */
 contract BattleRevenue {
     DeckAssembly public deckAssembly;
     
-    // ============ 分账比例（basis points, 10000 = 100%）============
-    // 第一层扣除（直接从总池扣）
-    uint16 public constant GATE_FEE_BPS = 3000;        // 30% 山门
-    uint16 public constant UPGRADE_POOL_BPS = 2000;     // 20% 升级池
+    // Treasury 地址（预留，可 setter 更新，仅 owner）
+    address public treasury;      // 接收项目层分账的 Treasury 合约地址
+    address public owner;          // 合约 owner，控制权限函数
+
+    // ============ 权限修饰符 ============
+    modifier onlyOwner() {
+        require(msg.sender == owner, "E001: Not owner");
+        _;
+    }
     
-    // 第二层分配（剩余 50% 的内部比例，总和=100%）
-    // 创作者 45% | 编排者 25% | 审查员 8% | 公共池 8% | 系统 5% | 大使 5% | 储备 4%
-    // 第二层占总池 = 22.5% + 12.5% + 4% + 4% + 2.5% + 2.5% + 2% = 50% ✓
-    uint16 public constant CREATOR_SHARE_BPS = 4500;    // 创作者占剩余 45% = 22.5% of total
-    uint16 public constant EDGE_SHARE_BPS = 2500;       // 编排者占剩余 25% = 12.5% of total
-    uint16 public constant REVIEWER_SHARE_BPS = 800;    // 审查员占剩余 8% = 4% of total
-    uint16 public constant PUBLIC_POOL_BPS = 800;       // 公共池占剩余 8% = 4% of total
-    uint16 public constant PLATFORM_FEE_BPS = 500;      // 系统占剩余 5% = 2.5% of total
-    uint16 public constant AMBASSADOR_BPS = 500;       // 大使占剩余 5% = 2.5% of total
-    uint16 public constant RESERVE_BPS = 400;           // 储备占剩余 4% = 2% of total
-    // 第二层总和 = 45+25+8+8+5+5+4 = 100% ✓
-    // 第一层 50% + 第二层 50% = 100% ✓
+    // ============ 分账比例（basis points, 10000 = 100%）============
+    // 对战层单层分账，总和 = 100%
+    uint16 public constant CREATOR_SHARE_BPS = 4500;    // 创作者 45%
+    uint16 public constant EDGE_SHARE_BPS = 2500;       // 编排者 25%
+    uint16 public constant REVIEWER_SHARE_BPS = 800;    // 审查员 8%
+    uint16 public constant PUBLIC_POOL_BPS = 800;       // 公共池 8%
+    uint16 public constant PLATFORM_FEE_BPS = 500;      // 系统 5%
+    uint16 public constant AMBASSADOR_BPS = 500;       // 大使 5%
+    uint16 public constant RESERVE_BPS = 400;           // 储备 4%
+    // 总和 = 4500+2500+800+800+500+500+400 = 10000 = 100% ✓
     
     // ============ 投注范围 ============
     uint256 public constant MIN_BET = 0.1 ether;
@@ -54,7 +62,7 @@ contract BattleRevenue {
         bytes32 nodeId;
         address recipient;
         uint256 amount;
-        uint8 shareType; // 1=creator, 2=edge, 3=reviewer, 4=public, 5=platform, 6=ambassador, 7=gate, 8=upgrade
+        uint8 shareType; // 1=creator, 2=edge, 3=reviewer, 4=public, 5=platform, 6=ambassador, 7=reserve
     }
     
     // ============ 状态 ============
@@ -95,8 +103,18 @@ contract BattleRevenue {
         uint256 amount
     );
     
-    constructor(address _deckAssembly) {
+    event TreasuryUpdated(address indexed newTreasury);
+    
+    constructor(address _deckAssembly, address _treasury) {
         deckAssembly = DeckAssembly(_deckAssembly);
+        treasury = _treasury;
+        owner = msg.sender;
+    }
+    
+    // ============ 管理（仅 owner）============
+    function setTreasury(address _treasury) external onlyOwner {
+        treasury = _treasury;
+        emit TreasuryUpdated(_treasury);
     }
     
     // ============ 对战生命周期 ============
@@ -178,7 +196,7 @@ contract BattleRevenue {
         emit BattleEnded(battleId, winner, battle.revenuePool, block.timestamp);
     }
     
-    // ============ 分账核心逻辑 ============
+    // ============ 分账核心逻辑（对战层，单层100%）============
     
     function distributeRevenue(bytes32 battleId) external {
         Battle storage battle = battles[battleId];
@@ -187,18 +205,7 @@ contract BattleRevenue {
         require(battle.revenuePool > 0, "E007: Empty pool");
         
         uint256 totalPool = battle.revenuePool;
-        uint256 remaining = totalPool;
         
-        // === 第一层扣除 ===
-        uint256 gateAmount = totalPool * GATE_FEE_BPS / 10000;
-        uint256 upgradeAmount = totalPool * UPGRADE_POOL_BPS / 10000;
-        remaining -= gateAmount + upgradeAmount;
-        
-        // 记录第一层分配
-        _recordDistribution(battleId, bytes32(0), address(this), gateAmount, 7);
-        _recordDistribution(battleId, bytes32(0), address(this), upgradeAmount, 8);
-        
-        // === 第二层分配（按势位加权）===
         // 获取获胜牌组中的卡牌
         bytes32[] memory winnerCards;
         if (battle.winner == battle.player1) {
@@ -210,8 +217,8 @@ contract BattleRevenue {
         // 计算总势位（简化版：用卡牌数量作为权重）
         uint256 totalPotential = winnerCards.length * 100; // 每张卡基础势位 100
         
-        // 创作者分配（按势位加权）
-        uint256 creatorPool = remaining * CREATOR_SHARE_BPS / 10000;
+        // === 创作者分配（45%，按势位加权）===
+        uint256 creatorPool = totalPool * CREATOR_SHARE_BPS / 10000;
         for (uint i = 0; i < winnerCards.length; i++) {
             // TODO: 接入 PotentialOracle 获取真实势位
             uint256 cardPotential = 100; // 占位
@@ -224,24 +231,24 @@ contract BattleRevenue {
             _recordDistribution(battleId, winnerCards[i], creator, share, 1);
         }
         
-        // 编排者分配
-        uint256 edgePool = remaining * EDGE_SHARE_BPS / 10000;
+        // === 编排者分配（25%）===
+        uint256 edgePool = totalPool * EDGE_SHARE_BPS / 10000;
         // TODO: 获取编排边信息，分配给编排者
-        // 占位：将编排者份额暂存合约
+        // MVP 占位：将编排者份额暂存合约，后续补齐
         
-        // 其他份额
-        uint256 reviewerAmount = remaining * REVIEWER_SHARE_BPS / 10000;
-        uint256 publicAmount = remaining * PUBLIC_POOL_BPS / 10000;
-        uint256 platformAmount = remaining * PLATFORM_FEE_BPS / 10000;
-        uint256 ambassadorAmount = remaining * AMBASSADOR_BPS / 10000;
-        uint256 reserveAmount = remaining * RESERVE_BPS / 10000;
+        // === 其他份额（一次性分配）===
+        uint256 reviewerAmount = totalPool * REVIEWER_SHARE_BPS / 10000;
+        uint256 publicAmount = totalPool * PUBLIC_POOL_BPS / 10000;
+        uint256 platformAmount = totalPool * PLATFORM_FEE_BPS / 10000;
+        uint256 ambassadorAmount = totalPool * AMBASSADOR_BPS / 10000;
+        uint256 reserveAmount = totalPool * RESERVE_BPS / 10000;
         
-        // 记录分配
-        _recordDistribution(battleId, bytes32(0), address(this), reviewerAmount, 3);
-        _recordDistribution(battleId, bytes32(0), address(this), publicAmount, 4);
-        _recordDistribution(battleId, bytes32(0), address(this), platformAmount, 5);
-        _recordDistribution(battleId, bytes32(0), address(this), ambassadorAmount, 6);
-        _recordDistribution(battleId, bytes32(0), address(this), reserveAmount, 9); // 9=reserve
+        // 记录分配（recipient = treasury 或合约自身，待 DAO 层细化）
+        _recordDistribution(battleId, bytes32(0), treasury != address(0) ? treasury : address(this), reviewerAmount, 3);
+        _recordDistribution(battleId, bytes32(0), treasury != address(0) ? treasury : address(this), publicAmount, 4);
+        _recordDistribution(battleId, bytes32(0), treasury != address(0) ? treasury : address(this), platformAmount, 5);
+        _recordDistribution(battleId, bytes32(0), treasury != address(0) ? treasury : address(this), ambassadorAmount, 6);
+        _recordDistribution(battleId, bytes32(0), treasury != address(0) ? treasury : address(this), reserveAmount, 7);
         
         battle.distributed = true;
         totalRevenueDistributed += totalPool;
@@ -291,10 +298,9 @@ contract BattleRevenue {
         return pendingRevenue[recipient];
     }
     
-    // ============ 应急 ============
+    // ============ 应急（仅 owner）============
     
-    function emergencyWithdraw() external {
-        // TODO: 接入 GovernanceDAO 权限控制
+    function emergencyWithdraw() external onlyOwner {
         payable(msg.sender).transfer(address(this).balance);
     }
     
