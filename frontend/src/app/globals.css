@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-cream: #FAF9F7;
+  --color-card: #F2F0ED;
+  --color-border: #E5E2DC;
+  --color-text: #2D2A26;
+  --color-text-secondary: #6B665C;
+  --color-placeholder: #A39E94;
+  --color-income: #7BAE7F;
+  --color-decay: #D4976A;
+  --color-error: #C46B6B;
+}
+
+body {
+  font-family: "Inter", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background-color: var(--color-cream);
+  color: var(--color-text);
+}
+
+.tier-bronze { color: #B5A48A; }
+.tier-silver { color: #9BA3A9; }
+.tier-gold { color: #D4AF37; }
+.tier-diamond { color: #6FA3C4; }
+.tier-master { color: #C4A6C4; }
+
+.bg-tier-bronze { background-color: #B5A48A; }
+.bg-tier-silver { background-color: #9BA3A9; }
+.bg-tier-gold { background-color: #D4AF37; }
+.bg-tier-diamond { background-color: #6FA3C4; }
+.bg-tier-master { background-color: #C4A6C4; }
