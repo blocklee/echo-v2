@@ -223,8 +223,48 @@ function mapFourRights(fourRights) {
   };
 }
 
-// Store potential history for each node (time series)
-const potentialHistory = new Map(); // nodeId -> [{timestamp, potential, phase}, ...]
++// In-memory cache with TTL for API responses
++const apiCache = new Map();
++const CACHE_TTL = 5000; // 5 seconds
++
++function getCache(key) {
++  const entry = apiCache.get(key);
++  if (entry && Date.now() - entry.time < CACHE_TTL) {
++    return entry.data;
++  }
++  apiCache.delete(key);
++  return null;
++}
++
++function setCache(key, data) {
++  apiCache.set(key, { time: Date.now(), data });
++}
++
++function cacheKey(endpoint, params = '') {
++  return `${endpoint}:${params}`;
++}
+
+// In-memory cache with TTL for API responses
+const apiCache = new Map();
+const CACHE_TTL = 5000; // 5 seconds
+
+function getCache(key) {
+  const entry = apiCache.get(key);
+  if (entry && Date.now() - entry.time < CACHE_TTL) {
+    return entry.data;
+  }
+  apiCache.delete(key);
+  return null;
+}
+
+function setCache(key, data) {
+  apiCache.set(key, { time: Date.now(), data });
+}
+
+// Cache key generator
+function cacheKey(endpoint, params = '') {
+  return `${endpoint}:${params}`;
+}
 
 // Calculate shigraph potential (six-phase spec v0.1)
 function calculatePotential(node, allNodes, edges) {
@@ -375,6 +415,13 @@ function calculatePotential(node, allNodes, edges) {
 
 app.get('/api/graph', async (req, res) => {
   try {
+    const cacheKeyStr = cacheKey('graph', req.query.nodeId || '');
+    const cached = getCache(cacheKeyStr);
+    if (cached) {
+      sendJSON(res, cached);
+      return;
+    }
+    
     if (!graphData || Date.now() - lastUpdate > 30000) {
       await refreshGraph();
     }
@@ -399,7 +446,9 @@ app.get('/api/graph', async (req, res) => {
         versionConstraint: edge.depth > 1 ? 'descendant-capped' : 'direct-derivation' // 边伦理：版本约束
       }))
     };
-    sendJSON(res, cleanBigInt(enrichedGraph));
+    const result = cleanBigInt(enrichedGraph);
+    setCache(cacheKeyStr, result);
+    sendJSON(res, result);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -407,6 +456,12 @@ app.get('/api/graph', async (req, res) => {
 
 app.get('/api/potential', async (req, res) => {
   try {
+    const cached = getCache('potential');
+    if (cached) {
+      sendJSON(res, cached);
+      return;
+    }
+    
     if (!graphData || Date.now() - lastUpdate > 30000) {
       await refreshGraph();
     }
@@ -417,10 +472,12 @@ app.get('/api/potential', async (req, res) => {
     
     console.log('Potential data:', JSON.stringify(potentials[0], (k, v) => typeof v === 'bigint' ? 'BIGINT:' + v.toString() : v));
     
-    sendJSON(res, cleanBigInt({
+    const result = cleanBigInt({
       nodes: potentials,
       updatedAt: lastUpdate
-    }));
+    });
+    setCache('potential', result);
+    sendJSON(res, result);
   } catch (e) {
     console.error('Potential error:', e);
     res.status(500).json({ error: e.message, stack: e.stack });
@@ -429,6 +486,12 @@ app.get('/api/potential', async (req, res) => {
 
 app.get('/api/nodes', async (req, res) => {
   try {
+    const cached = getCache('nodes');
+    if (cached) {
+      sendJSON(res, cached);
+      return;
+    }
+    
     if (!graphData || Date.now() - lastUpdate > 30000) {
       await refreshGraph();
     }
@@ -444,7 +507,9 @@ app.get('/api/nodes', async (req, res) => {
         role: null
       };
     });
-    sendJSON(res, cleanBigInt({ nodes: nodesWithPotential, total: graphData.summary.totalNodes }));
+    const result = cleanBigInt({ nodes: nodesWithPotential, total: graphData.summary.totalNodes });
+    setCache('nodes', result);
+    sendJSON(res, result);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -497,6 +562,12 @@ app.get('/api/nodes/:id/metrics', async (req, res) => {
 
 app.get('/api/edges', async (req, res) => {
   try {
+    const cached = getCache('edges');
+    if (cached) {
+      sendJSON(res, cached);
+      return;
+    }
+    
     if (!graphData || Date.now() - lastUpdate > 30000) {
       await refreshGraph();
     }
@@ -504,7 +575,9 @@ app.get('/api/edges', async (req, res) => {
       ...edge,
       versionConstraint: edge.depth > 1 ? 'descendant-capped' : 'direct-derivation' // 边伦理：版本约束
     }));
-    sendJSON(res, cleanBigInt({ edges: edgesWithEthics, total: graphData.summary.totalEdges }));
+    const result = cleanBigInt({ edges: edgesWithEthics, total: graphData.summary.totalEdges });
+    setCache('edges', result);
+    sendJSON(res, result);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
