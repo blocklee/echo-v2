@@ -4,6 +4,9 @@ pragma solidity ^0.8.19;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract CardMinting is Ownable {
+    
+    constructor(address initialOwner) Ownable(initialOwner) {}
+    
     // 经济参数 (v0.1 — 猫先森 10:53 提供)
     uint256 public constant MINT_FEE = 0.02 ether;
     uint256 public constant USAGE_BASE = 0.01 ether;
@@ -99,7 +102,7 @@ contract CardMinting is Ownable {
      * @return isDiscounted 是否在减免期
      * @return remainingDays 剩余减免天数
      */
-    function checkFirstCardDiscount(bytes32 nodeId) external view returns (bool isDiscounted, uint256 remainingDays) {
+    function checkFirstCardDiscount(bytes32 nodeId) public view returns (bool isDiscounted, uint256 remainingDays) {
         Card storage card = cards[nodeId];
         require(card.createdAt > 0, "E001: Card not found");
         

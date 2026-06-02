@@ -108,7 +108,7 @@ contract BattleRevenue {
         require(msg.value >= MIN_BET && msg.value <= MAX_BET, "E006: Bet out of range");
         
         // 校验牌组所有权
-        (,,address owner,,,,) = deckAssembly.decks(deckId);
+        address owner = deckAssembly.getDeck(deckId).owner;
         require(owner == msg.sender, "E003: Not deck owner");
         
         battleId = keccak256(abi.encodePacked(
@@ -146,7 +146,7 @@ contract BattleRevenue {
         require(battle.player2 == address(0) || battle.player2 == msg.sender, "E007: Already joined");
         require(msg.value >= battle.betAmount, "E006: Insufficient bet");
         
-        (,,address owner,,,,) = deckAssembly.decks(deckId);
+        address owner = deckAssembly.getDeck(deckId).owner;
         require(owner == msg.sender, "E003: Not deck owner");
         
         battle.player2 = msg.sender;
@@ -202,9 +202,9 @@ contract BattleRevenue {
         // 获取获胜牌组中的卡牌
         bytes32[] memory winnerCards;
         if (battle.winner == battle.player1) {
-            (,,,,winnerCards,,,) = deckAssembly.decks(battle.deck1);
+            winnerCards = deckAssembly.getDeck(battle.deck1).cardNodeIds;
         } else {
-            (,,,,winnerCards,,,) = deckAssembly.decks(battle.deck2);
+            winnerCards = deckAssembly.getDeck(battle.deck2).cardNodeIds;
         }
         
         // 计算总势位（简化版：用卡牌数量作为权重）
@@ -218,7 +218,7 @@ contract BattleRevenue {
             uint256 share = creatorPool * cardPotential / totalPotential;
             
             // 获取卡牌创作者
-            (address creator,,,,,,,) = deckAssembly.cardMinting().cards(winnerCards[i]);
+            address creator = deckAssembly.cardMinting().getCard(winnerCards[i]).creator;
             
             pendingRevenue[creator] += share;
             _recordDistribution(battleId, winnerCards[i], creator, share, 1);
