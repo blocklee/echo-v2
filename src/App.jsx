@@ -8,8 +8,8 @@ import WalletBar from './components/WalletBar';
 import ErrorBoundary from './components/ErrorBoundary';
 import { WalletProvider } from './contexts/WalletContext';
 
-const navLinkBase = 'relative text-neutral-400 hover:text-white transition-colors duration-200 py-1';
-const navLinkActive = 'text-white';
+const navLinkBase = 'relative text-[#6B665C] hover:text-[#2D2A26] transition-colors duration-200 py-1';
+const navLinkActive = 'text-[#2D2A26] font-medium';
 
 function PageWrapper({ children }) {
   const [fade, setFade] = useState(false);
@@ -26,14 +26,14 @@ function App() {
     <ErrorBoundary>
       <WalletProvider>
         <BrowserRouter>
-          <div className="min-h-screen bg-neutral-950 text-white">
-            <nav className="border-b border-neutral-800 px-6 py-3 flex items-center gap-6">
-              <span className="font-bold text-lg tracking-wider">ECHO</span>
+          <div className="min-h-screen bg-[#FAF9F7] text-[#2D2A26]">
+            <nav className="border-b border-[#E5E2DC] px-6 py-3 flex items-center gap-6">
+              <span className="font-bold text-lg tracking-wider text-[#2D2A26]">⚡ ECHO</span>
               <NavLink to="/jing" className={({ isActive }) => `${navLinkBase} ${isActive ? navLinkActive : ''}`}>
                 {({ isActive }) => (
                   <span className="relative">
                     境
-                    <span className={`absolute left-0 -bottom-0.5 h-0.5 bg-emerald-500 transition-all duration-300 ease-out ${isActive ? 'w-full' : 'w-0'}`} />
+                    <span className={`absolute left-0 -bottom-0.5 h-0.5 bg-[#6B9E87] transition-all duration-300 ease-out ${isActive ? 'w-full' : 'w-0'}`} />
                   </span>
                 )}
               </NavLink>
@@ -41,7 +41,7 @@ function App() {
                 {({ isActive }) => (
                   <span className="relative">
                     典
-                    <span className={`absolute left-0 -bottom-0.5 h-0.5 bg-emerald-500 transition-all duration-300 ease-out ${isActive ? 'w-full' : 'w-0'}`} />
+                    <span className={`absolute left-0 -bottom-0.5 h-0.5 bg-[#6B9E87] transition-all duration-300 ease-out ${isActive ? 'w-full' : 'w-0'}`} />
                   </span>
                 )}
               </NavLink>
@@ -49,7 +49,7 @@ function App() {
                 {({ isActive }) => (
                   <span className="relative">
                     源
-                    <span className={`absolute left-0 -bottom-0.5 h-0.5 bg-emerald-500 transition-all duration-300 ease-out ${isActive ? 'w-full' : 'w-0'}`} />
+                    <span className={`absolute left-0 -bottom-0.5 h-0.5 bg-[#6B9E87] transition-all duration-300 ease-out ${isActive ? 'w-full' : 'w-0'}`} />
                   </span>
                 )}
               </NavLink>
@@ -57,7 +57,7 @@ function App() {
                 {({ isActive }) => (
                   <span className="relative">
                     竞
-                    <span className={`absolute left-0 -bottom-0.5 h-0.5 bg-emerald-500 transition-all duration-300 ease-out ${isActive ? 'w-full' : 'w-0'}`} />
+                    <span className={`absolute left-0 -bottom-0.5 h-0.5 bg-[#6B9E87] transition-all duration-300 ease-out ${isActive ? 'w-full' : 'w-0'}`} />
                   </span>
                 )}
               </NavLink>

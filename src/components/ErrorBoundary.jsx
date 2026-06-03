@@ -17,12 +17,12 @@ export default class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-neutral-950 text-white flex items-center justify-center p-8">
-          <div className="bg-red-900/20 border border-red-800 rounded-lg p-6 max-w-md">
-            <h2 className="text-xl font-bold text-red-300 mb-2">系统异常</h2>
-            <p className="text-neutral-400 text-sm mb-4">合约调用或渲染过程中发生错误，请刷新重试。</p>
-            <pre className="text-xs text-red-400 bg-red-950/50 p-3 rounded overflow-auto">{this.state.error?.message}</pre>
-            <button onClick={() => window.location.reload()} className="mt-4 text-sm bg-red-800 hover:bg-red-700 px-3 py-1.5 rounded">刷新页面</button>
+        <div className="min-h-screen bg-[#FAF9F7] text-[#2D2A26] flex items-center justify-center p-8">
+          <div className="bg-white border border-[#E5E2DC] rounded-lg p-6 max-w-md">
+            <h2 className="text-xl font-bold text-[#C46B6B] mb-2">系统异常</h2>
+            <p className="text-[#6B665C] text-sm mb-4">合约调用或渲染过程中发生错误，请刷新重试。</p>
+            <pre className="text-xs text-[#C46B6B] bg-[#F2F0ED] p-3 rounded overflow-auto">{this.state.error?.message}</pre>
+            <button onClick={() => window.location.reload()} className="mt-4 text-sm border border-[#E5E2DC] px-3 py-1.5 rounded hover:border-[#2D2A26] transition-colors">刷新页面</button>
           </div>
         </div>
       );
