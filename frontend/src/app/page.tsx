@@ -6,9 +6,10 @@ import { CardMinter } from '../components/CardMinter';
 import { DeckBuilder } from '../components/DeckBuilder';
 import { BattleArena } from '../components/BattleArena';
 import { PotentialMap } from '../components/PotentialMap';
+import { HexagramInfoTheory } from '../components/HexagramInfoTheory';
 import type { Card } from '../types';
 
-type Tab = 'mint' | 'deck' | 'battle' | 'map';
+type Tab = 'mint' | 'deck' | 'battle' | 'map' | 'info';
 
 export default function Home() {
   const { address, connecting, error, connect, disconnect } = useWallet();
@@ -20,6 +21,7 @@ export default function Home() {
     { id: 'deck', label: '编排' },
     { id: 'battle', label: '对战' },
     { id: 'map', label: '地图' },
+    { id: 'info', label: '信息论' },
   ];
 
   return (
@@ -89,6 +91,7 @@ export default function Home() {
         {activeTab === 'deck' && <DeckBuilder />}
         {activeTab === 'battle' && <BattleArena />}
         {activeTab === 'map' && <PotentialMap cards={myCards} />}
+        {activeTab === 'info' && <HexagramInfoTheory />}
       </main>
 
       {/* Footer */}
