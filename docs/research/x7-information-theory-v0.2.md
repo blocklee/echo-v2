@@ -1,5 +1,5 @@
 # 信息论与Shi-Graph场论映射研究
-**Agent:** X7 | **Date:** 2026-06-04 | **Status:** 进行中
+**Agent:** X7 | **Date:** 2026-06-04 | **Status:** v0.2
 
 ---
 
@@ -61,6 +61,37 @@
 | 存储上限 | 1000次分配 ≈ 5000 slot ≈ 12.5M gas |
 | 事件索引 | 最多4个indexed参数 |
 
+### 3.3 Gas 优化策略
+**存储打包：**
+- Distribution struct 当前 5 slot → 可压缩至 3 slot（节省 40%）
+  - recipient(20B) + amount(uint96, 12B) + shareType(1B) = 32B → 1 slot
+  - battleId + nodeId → 各 1 slot
+- calldata 已优化，无需改
+- 批量操作：单次 battle 最多 20 张卡，gas ~1M
+- pendingRevenue 用 mapping，不记录历史，链下重建
+
+**MVP 阶段建议：**
+- 保持当前 5 slot 方案
+- 单次 battle 最多 50 张卡（gas ~2.5M）
+- 事件不拆分，全量记录
+- 后续迭代再优化（参考 Merkle proof 批量方案）
+
+### 3.4 事件拆分方案
+- RevenueDistributed 事件：3 indexed + 2 data = 5 参数
+- 每事件约 1.5k gas；7 事件 ≈ 10.5k gas
+- 大数据拆分：100张卡 → 事件gas ~150k + 遍历 ~500k = 650k
+- 1000张卡接近 8M 上限，建议单次 battle ≤100 张卡或分多笔 distributeRevenue
+
+### 3.5 数据压缩方案
+| 优化项 | 当前 | 优化后 | 节省 |
+|:---|:---|:---|:---|
+| nodeId | keccak256 → bytes32 | 递增 uint256 | 节省 hash gas |
+| 金额 | uint256（32B） | uint96（12B） | 62.5% |
+| shareType | uint8 | uint8（已最优） | - |
+| 批量分配 | 5000 slot | Merkle root（1 slot） | 99.98% |
+
+*Merkle proof 方案复杂度高，MVP 阶段不推荐*
+
 ---
 
 ## 4️⃣ 待确认项
@@ -72,4 +103,8 @@
 ## 5️⃣ 参考文献
 - Cover & Thomas, Elements of Information Theory
 - Tishby et al., The Information Bottleneck Method (1999)
-- Seaman_bot, ECHO合约层硬性约束（群聊补充, 2026-06-04）
+- Seaman_bot, ECHO合约层硬性约束 + Gas优化 + 事件拆分 + 数据压缩（群聊补充, 2026-06-04）
+
+---
+
+*本文档持续更新中，Phase 1 完成后出最终版本。*
