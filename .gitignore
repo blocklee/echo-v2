@@ -1,5 +1,65 @@
+# Build artifacts (from remote origin/main)
 node_modules
 dist
 dist-ssr
 *.local
 .env
+
+# === Workspace-local: exclude agent core files (not part of shared echo-v2) ===
+/.git-credentials
+/.openclaw/
+/DREAMS.md
+/MEMORY.md
+/MEMORY.md.bak-*
+/SOUL.md
+/TOOLS.md
+/AGENTS.md
+/IDENTITY.md
+/USER.md
+/HEARTBEAT.md
+
+# Memory + skills + build caches (agent-private)
+/memory/
+/skills/
+/.pnpm-store/
+/*.log
+/*.bak-*
+/echo-heartbeat-*.log
+/echo-heartbeat-*.md
+
+# === outputs/ contents (agent work-in-progress, not yet in remote) ===
+# === outputs/ contents (agent work-in-progress, mostly agent-private) ===
+/outputs/AplusA-partial/
+/outputs/abi-build/
+/outputs/echo/
+/outputs/echo-battle-frontend/
+/outputs/echo-frontend/
+/outputs/echo-v2/
+/outputs/echo-v2-push/
+/outputs/emergence-validation/
+/outputs/logs/
+/outputs/scripts/
+/outputs/ssh-keys/
+/outputs/v03-tech-doc/
+/outputs/v15.2_simulation/
+/outputs/.spike-backup/
+/outputs/docker-compose.yml
+
+# === ZK/PDE spike work: track scripts + reports in echo-engine-v2 ===
+# Whitelist specific files (override the parent directory ignore)
+!/outputs/echo-engine-v2/scripts/
+/outputs/echo-engine-v2/scripts/__pycache__/
+!/outputs/echo-engine-v2/data/chain-reads-14cards.json
+!/outputs/echo-engine-v2/zk-pde-frontend-components-v0.1.md
+!/outputs/echo-engine-v2/zk-pde-spike-talus-v0.1.md
+
+# echo-engine-v2 other contents ignored
+/outputs/echo-engine-v2/*
+!/outputs/echo-engine-v2/scripts/
+!/outputs/echo-engine-v2/data/chain-reads-14cards.json
+!/outputs/echo-engine-v2/zk-pde-frontend-components-v0.1.md
+!/outputs/echo-engine-v2/zk-pde-spike-talus-v0.1.md
+
+# General build artifacts
+**/__pycache__/
+**/*.pyc
