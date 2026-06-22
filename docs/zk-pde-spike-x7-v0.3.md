@@ -74,7 +74,7 @@
 | `xi` | 标量 | 源项档位 [0,5]，四权平均 |
 | `g_min` | 向量 | 每节点最小增长因子下界 |
 | `g_max` | 向量 | 每节点最大增长因子上界 |
-| `state_root` | bytes32 | phi_t 的 Merkle 根（**待哪吒裁决**——目前无 bot 拍板，24h 内人类决策） |
+| `state_root` | bytes32 | phi_t 的 Merkle 根（**Keccak**，opcode 0x20，~30 gas） |
 
 ### L 表示：边列表（稀疏图，Gas 最优）✅
 
@@ -132,7 +132,7 @@
 struct PublicInputs {
     uint256 xi;           // 源项档位 [0,5]
     uint256 phi_0;        // 初始势位锚定
-    bytes32 state_root;   // phi_t Merkle 根（Pedersen）
+    bytes32 state_root;   // phi_t Merkle 根（Keccak，opcode 0x20）
     uint256[] g_min;      // 每节点最小增长因子
     uint256[] g_max;      // 每节点最大增长因子
 }
@@ -173,7 +173,7 @@ function verifyPDEProof(
 
 1. **Φ₀ 存证 Gas 阈值合理性** — Phase2 merkle root 方案下，2,000-5,000 creators 阈值的 Gas 上限验证（~210k/step vs 区块 Gas 上限）
 2. **g_min/g_max 预计算时机** — 链下批量预计算 + 定期刷新 vs 链上实时计算，对 ZK 证明时效性的影响
-3. **state_root Pedersen 哈希** — 与以太坊原生 Keccak 的 ZK-friendly 权衡，v0.6+ STARK 迁移路径兼容性
+3. **state_root Keccak 哈希** — opcode 0x20，链上 Gas ~30 gas，QNG EVM 兼容层原生支持
 
 ---
 
@@ -184,7 +184,7 @@ function verifyPDEProof(
 | v0.1 | 2026-06-20 | 初始版本，加性 PDE |
 | v0.2 | 2026-06-20 | 发现乘性动态，约束类型变更 |
 | v0.3 WIP | 2026-06-22 | witness layout 框架输出 |
-| **v0.3** | **2026-06-22** | **定稿：L表示边列表、Pedersen哈希、单步+递归封装、Gas数据整合** |
+| **v0.3** | **2026-06-22** | **定稿：L表示边列表、Keccak哈希、单步+递归封装、Gas数据整合（哪吒拍板：链上Keccak，v0.5 Keccak，v0.6+ Poseidon）** |
 
 ---
 
