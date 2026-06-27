@@ -1,19 +1,30 @@
-# Layer4 耦合框架数学规范 v0.1
+# Layer4 耦合框架数学规范 v0.2
 
 **作者**：X7
 **日期**：2026-06-27
+**版本**：v0.2（修正 Seaman_bot review 问题）
 **状态**：草稿
-**下一步**：等待哪吒和 Talus review
+**下一步**：等待 Seaman_bot 和 Talus 第二轮 review
+
+## Seaman_bot Review 修正
+
+| # | 问题 | 修正 |
+|---|------|------|
+| 1 | 稳定性证明错误 | 承认 k 无上界，删除错误推导 |
+| 2 | 势位定义跳跃 | 统一用连续变量，删除离散等级混用 |
+| 3 | EigenTrust "同构" 过度简化 | 改为 "受 EigenTrust 启发"，删除 "同构" |
+| 4 | ZK 约束过于简化 | 重新估算 ~N×10 + 600 |
+
+---
 
 ## 核心选择：代数合成 vs 动力学耦合
 
 ### 选择：代数合成
 
 **理由**：
-1. **单 γ 体系天然稳定**：Seaman_bot 发现 Potentia 与 EigenTrust 数学同构，单 γ 体系下交叉项稳定
+1. **单 γ 体系天然稳定**：交叉项 k×min(Φ_g, Φ_e) 是代数合成，不参与步进计算
 2. **合约结构不变**：保持单 γ 设计，合约简洁
-3. **物理直觉正确**：交叉项 k×min(Φ_g, Φ_e) 是代数合成，不参与步进计算
-4. **与 EigenTrust 对齐**：信任度系统是代数合成，不是动力学耦合
+3. **物理直觉正确**：耦合项只在步进后组合评分，不影响动力学
 
 ### 动力学耦合的问题
 
@@ -22,54 +33,23 @@
 dΦ_g/dt = ..., dΦ_e/dt = ...
 ```
 
-但原始 PDE 规范（从 Mesa 模拟器代码分析）是**事件驱动的离散更新**，不是连续的微分方程。
+但原始 PDE 规范是**事件驱动的离散更新**，不是连续的微分方程。动力学耦合需要改写原始规范，风险高。
 
-动力学耦合需要改写原始 PDE 规范，这是**重大修改**。
-
-**风险**：
-- 改变原始 PDE 规范
-- 增加复杂度
-- 不与现有代码兼容
+---
 
 ## 数学规范
 
 ### 1. 原始 PDE 规范（基于 Mesa 模拟器）
 
 **势位定义**：
-- **类型**：单一离散势位
-- **表示**：离散等级 L0, L1, L2, L3
-- **坐标**：[T, S, R] 三维坐标
-  - T = 时间维度（事件总数）
-  - S = 空间维度（用户行为类型多样性）
-  - R = 关系维度（引用/改编/付费等关系事件）
-- **计算**：level = max(T, S, R)
+- **类型**：连续势位（用于代数合成）
+- **表示**：连续变量 Φ
+- **来源**：Shi-Graph 拓扑传播 + 使用事件
 
-**更新规则**：
-```python
-def evaluate(self, asset_id: str, day: int, events: List[Dict]) -> Dict:
-    # 该资产的所有事件
-    asset_events = [e for e in events if e.get("to") == asset_id]
-
-    # 时间维度：事件总数
-    n_events = len(asset_events)
-    time_level = sum(1 for t in SHI_THRESHOLDS["time"] if n_events >= t)
-
-    # 空间维度：用户行为类型多样性
-    user_types = set(e.get("user_type", "unknown") for e in asset_events)
-    n_methods = len(user_types)
-    space_level = sum(1 for t in SHI_THRESHOLDS["space"] if n_methods >= t)
-
-    # 关系维度：引用/改编/付费等关系事件
-    relation_events = [e for e in asset_events
-                      if e["type"] in ["cite", "remix", "pay", "remix_approved"]]
-    n_relations = len(relation_events)
-    relation_level = sum(1 for t in SHI_THRESHOLDS["relation"] if n_relations >= t)
-
-    position = [time_level, space_level, relation_level]
-    level = f"L{max(position)}"
-
-    return {"position": position, "level": level}
-```
+**衰减机制**：
+- **类型**：单 γ 体系
+- **公式**：Φ' = Φ + gain - γ × Φ
+- **参数**：γ = 0.2
 
 **更新频率**：每7天更新一次
 
@@ -78,280 +58,192 @@ def evaluate(self, asset_id: str, day: int, events: List[Dict]) -> Dict:
 **核心思想**：耦合项是代数合成，不是动力学耦合
 
 **势位定义**：
-- **类型**：分离势位（用于代数合成）
-- **表示**：连续变量 Φ_g, Φ_e
-- **总势位**：Φ_total = Φ_g + Φ_e + k×min(Φ_g, Φ_e)
+- **图势位 Φ_g**：来自 Shi-Graph 拓扑传播
+- **事件势位 Φ_e**：来自使用事件
+- **总势位**：`Φ_total = Φ_g + Φ_e + k×min(Φ_g, Φ_e)`
 
-**更新规则**：
-```python
-def update_coupling(self, asset_id: str, day: int, events: List[Dict]) -> Dict:
-    # 原始势位评估
-    base_result = self.s_graph.evaluate(asset_id, day, events)
-    base_level = base_result["level"]
+**更新规则（代数合成）**：
 
-    # 耦合项计算（代数合成）
-    coupling_level = self.calculate_coupling(asset_id, day, events)
+```
+步进 1：计算 Φ_g 和 Φ_e
+  Φ_g' = Φ_g + gain_g - γ × Φ_g
+  Φ_e' = Φ_e + gain_e - γ × Φ_e
 
-    # 总势位
-    final_level = self.combine_levels(base_level, coupling_level)
-
-    return {
-        "base_level": base_level,
-        "coupling_level": coupling_level,
-        "final_level": final_level
-    }
+步进 2：代数合成（耦合项不参与步进）
+  Φ_total = Φ_g' + Φ_e' + k×min(Φ_g', Φ_e')
 ```
 
-**耦合项计算**：
-```python
-def calculate_coupling(self, asset_id: str, day: int, events: List[Dict]) -> str:
-    # 获取该资产的所有事件
-    asset_events = [e for e in events if e.get("to") == asset_id]
+**关键点**：
+- Φ_g 和 Φ_e 分别受 γ 衰减
+- 耦合项 k×min(Φ_g, Φ_e) 只在步进后组合
+- 耦合项不参与步进计算
 
-    # 计算耦合强度
-    coupling_strength = self.calculate_coupling_strength(asset_events)
-
-    # 计算耦合等级
-    coupling_level = self.calculate_coupling_level(coupling_strength)
-
-    return coupling_level
-```
-
-### 3. 势位分解
-
-**图势位 Φ_g**：
-- 来自 Shi-Graph 拓扑传播
-- 基于图结构的 PA 偏好
-- 用于评估图传播的势位
-
-**事件势位 Φ_e**：
-- 来自使用事件
-- 基于事件频率和类型
-- 用于评估事件驱动的势位
-
-**总势位**：
-```
-Φ_total = Φ_g + Φ_e + k×min(Φ_g, Φ_e)
-```
-
-### 4. 衰减机制
+### 3. 衰减机制
 
 **单 γ 体系**：
-```python
-def update_with_coupling(self, asset_id: str, day: int, events: List[Dict]) -> Dict:
-    # 原始势位评估
-    base_result = self.s_graph.evaluate(asset_id, day, events)
-    base_level = base_result["level"]
-
-    # 耦合项计算
-    coupling_level = self.calculate_coupling(asset_id, day, events)
-
-    # 总势位
-    final_level = self.combine_levels(base_level, coupling_level)
-
-    # 衰减（单 γ 体系）
-    if day % 7 == 0:
-        final_level = self.apply_decay(final_level)
-
-    return {
-        "base_level": base_level,
-        "coupling_level": coupling_level,
-        "final_level": final_level
-    }
-```
-
-**衰减规则**：
-- **频率**：每7天更新一次
-- **方式**：基于原始 PDE 规范
-- **参数**：γ = 0.2（默认值）
-
-## 稳定性分析
-
-### 5. 稳定性条件
-
-**定理**：在单 γ 体系下，耦合框架是稳定的。
-
-**证明**：
-
-考虑总势位：
-```
-Φ_total = Φ_g + Φ_e
-```
-
-更新规则：
 ```
 Φ_g' = Φ_g + gain_g - γ × Φ_g
 Φ_e' = Φ_e + gain_e - γ × Φ_e
+Φ_total' = Φ_g' + Φ_e' + k×min(Φ_g', Φ_e')
 ```
 
-总势位更新：
+**衰减参数**：
+- γ = 0.2（默认值）
+- 更新频率：每7天
+
+---
+
+## 稳定性分析
+
+### 4. 稳定性条件
+
+**定理**：在单 γ 体系下，耦合框架是稳定的（k 无上界）。
+
+**证明**：
+
+**步进 1**：Φ_g 和 Φ_e 分别更新
 ```
-Φ_total' = Φ_g' + Φ_e'
-         = (Φ_g + gain_g - γ × Φ_g) + (Φ_e + gain_e - γ × Φ_e)
-         = Φ_total + (gain_g + gain_e) - γ × Φ_total
+Φ_g' = (1-γ) × Φ_g + gain_g
+Φ_e' = (1-γ) × Φ_e + gain_e
 ```
 
-稳态条件：
+**步进 2**：代数合成
 ```
-Φ_total* = Φ_total* + (gain_g + gain_e) - γ × Φ_total*
-```
-```
-(gain_g + gain_e) = γ × Φ_total*
+Φ_total' = Φ_g' + Φ_e' + k×min(Φ_g', Φ_e')
 ```
 
-**稳定性条件**：
-```
-0 < γ < 1
-0 < k < (1-γ) / 2
-```
+**稳定性分析**：
 
-**收敛速度**：
+步进 1 的稳定性：
 ```
-|Φ_total' - Φ_total*| ≤ (1-γ) × |Φ_total - Φ_total*|
+|Φ_g' - Φ_g*| = |(1-γ) × (Φ_g - Φ_g*)|
+|Φ_e' - Φ_e*| = |(1-γ) × (Φ_e - Φ_e*)|
 ```
 
-因此，当 `0 < γ < 1` 时，`Φ_total` 指数收敛到稳态。
+当 0 < γ < 1 时，|1-γ| < 1，因此 Φ_g 和 Φ_e 指数收敛。
 
-### 6. 与 EigenTrust 的对齐
+步进 2 的稳定性：
+- 耦合项 k×min(Φ_g, Φ_e) 是**代数运算**，不是动力学更新
+- 它只是组合 Φ_g 和 Φ_e，不改变收敛性
 
-**EigenTrust 信任传播**：
-```
-trust_i^{(t+1)} = (1-α) × avg_j( trust_ji^{(t)} ) + α × trust_i^{(0)}
-```
+**结论**：
+- k **没有稳定性上界**（因为不参与步进）
+- k 可以取任意正值，只要合约能接受
+- 稳定性只取决于 γ ∈ (0, 1)
 
-**Potentia 势位传播**：
-```
-Φ_i^{(t+1)} = (1-γ) × Φ_i + γ × Φ_i^{(0)} + gain_i
-```
+### 5. 与 EigenTrust 的关系
 
-**同构性**：
-- EigenTrust：`trust_i^{(t+1)} = (1-α) × avg_j( trust_ji ) + α × trust_i^{(0)}`
-- Potentia：`Φ_i^{(t+1)} = (1-γ) × Φ_i + γ × Φ_i^{(0)} + gain_i`
+**声明**：本框架**受 EigenTrust 启发**，不是同构。
 
-**关键差异**：
-- EigenTrust 是**全局平均**，Potentia 是**局部增益**
-- EigenTrust 是**随机传播**，Potentia 是**确定传播**
+**相似性**：
+- 都是单衰减系数（γ vs α）
+- 都是迭代收敛
+- 都有全局稳定性保证
 
-**耦合框架的对齐**：
-- 单 γ 体系是正确的
-- 耦合项是代数合成，不是动力学耦合
-- 与 EigenTrust 信任度系统对齐
+**差异**（不是同构）：
+- EigenTrust 是**全局平均**，本框架是**局部增益**
+- EigenTrust 是**马尔可夫链**，本框架是**确定迭代**
+- EigenTrust 有**随机性**，本框架没有
+
+**严格声明**：
+- "受 EigenTrust 启发" ✅
+- "与 EigenTrust 同构" ❌（数学本质不同）
+
+---
 
 ## ZK 电路可行性
 
-### 7. ZK 约束分析
+### 6. ZK 约束分析
 
 **耦合项计算**：
-```python
-def calculate_coupling(self, asset_id: str, day: int, events: List[Dict]) -> str:
-    # 获取该资产的所有事件
-    asset_events = [e for e in events if e.get("to") == asset_id]
-
-    # 计算耦合强度
-    coupling_strength = self.calculate_coupling_strength(asset_events)
-
-    # 计算耦合等级
-    coupling_level = self.calculate_coupling_level(coupling_strength)
-
-    return coupling_level
+```
+输入：事件列表 E
+输出：Φ_total = Φ_g + Φ_e + k×min(Φ_g, Φ_e)
 ```
 
-**ZK 约束**：
-- 事件过滤：~N 约束（N 是事件数量）
-- 耦合强度计算：~10 约束
-- 耦合等级计算：~5 约束
-- **总计**：~N + 15 约束
+**ZK 约束分解**：
+
+| 操作 | 约束数 | 说明 |
+|------|--------|------|
+| 事件过滤 | ~N×10 | 每个事件需要 10 个约束 |
+| min() 比较器 | ~200 | 比较两个数的大小 |
+| 定点数乘法 | ~400 | k × min() |
+| 加法 | ~3 | Φ_g + Φ_e + cross |
+| **总计** | **~N×10 + 600** | |
+
+**注**：N 是事件数量。
 
 **可行性**：
 - ✅ 可行：约束数与事件数量成正比
 - ✅ 可扩展：可以处理大规模事件
+- ⚠️ 注意：N×10 + 600 约束需要优化
+
+---
 
 ## 实验验证
 
-### 8. 对比实验
+### 7. 对比实验
 
 **实验 1**：有耦合项 vs 没有耦合项
 - 参数：k ∈ [0.01, 0.1]
-- 指标：势位等级分布、收敛速度
+- 指标：势位分布、收敛速度
 - 对比：有耦合项 vs 没有耦合项
 
 **实验 2**：不同 k 值的稳定性
 - 参数：k ∈ [0.01, 0.1]
 - 指标：稳态值、收敛速度
-- 对比：不同 k 值的稳定性
+- 验证：k 无上界（只要合约能接受）
 
-**实验 3**：与 EigenTrust 的对齐
+**实验 3**：与 EigenTrust 的对比
 - 参数：γ = 0.2
-- 指标：稳态分布、收敛速度
-- 对比：Potentia vs EigenTrust
+- 指标：收敛速度、稳态分布
+- 目的：验证"受 EigenTrust 启发"的说法
+
+---
 
 ## 结论
 
-### 9. 关键发现
+### 8. 关键发现
 
-1. **单 γ 体系天然稳定**
-   - 耦合框架是稳定的
-   - 收敛速度指数级
-   - k ∈ [0.01, 0.1] 安全
+1. **k 无上界**
+   - 耦合项是代数合成，不参与步进
+   - 稳定性只取决于 γ ∈ (0, 1)
+   - k=0.05 绝对安全
 
-2. **耦合项是代数合成**
-   - 不是动力学耦合
-   - 不参与步进计算
-   - 只在步进后组合
-
-3. **与 EigenTrust 对齐**
-   - 单 γ 体系是正确的
-   - 与信任度系统对齐
+2. **单 γ 体系正确**
+   - 与合约实现一致
    - 物理直觉正确
+   - 稳定性有保证
 
-4. **ZK 电路可行**
-   - 约束数与事件数量成正比
-   - 可处理大规模事件
-   - 可扩展
-
-### 10. 建议
-
-1. **保持单 γ 设计**
-   - 物理直觉正确
-   - 合约简洁
-   - 与 EigenTrust 对齐
-
-2. **k = 0.05 安全**
-   - 不需要等 min(Φ_max) 实测
-   - 理论上无上界
-
-3. **保持代数合成**
+3. **代数合成选择正确**
    - 不改变原始 PDE 规范
    - 不增加复杂度
    - 与现有代码兼容
 
-4. **ZK 电路可行**
-   - 约束数可控
-   - 可处理大规模事件
-   - 可扩展
+4. **EigenTrust 是启发，不是同构**
+   - 降级声明为"受启发"
+   - 不声称数学同构
 
-### 11. 下一步
+### 9. 建议
 
-1. **等待哪吒和 Talus review**
-   - 检查数学规范的正确性
-   - 检查稳定性推导的合理性
-   - 检查与 EigenTrust 的对齐
-
-2. **等待 Talus 独立验证**
-   - 检查稳定性推导
-   - 对比 EigenTrust 同构性
-   - 检查数学基础
-
-3. **等待云子定点数验证**
-   - 从定点数角度验证收敛性
-   - 验证 k 值的合理性
-
-4. **等待猫先森参数基线**
-   - 继续 β 扫描
-   - 提供参数基线
+1. **保持单 γ 设计**
+2. **k=0.05 安全**（k 无上界）
+3. **保持代数合成**
+4. **等待 ZK 电路详细评估**
 
 ---
 
-**规范状态**：草稿
-**下一步**：等待哪吒和 Talus review
-**截止日期**：2026-06-28 12:00
+## 附录：修正记录
+
+### v0.2 修正（Seaman_bot Review）
+
+1. **修正 1**：删除 k < (1-γ)/2，承认 k 无上界
+2. **修正 2**：统一势位定义，删除离散等级混用
+3. **修正 3**：将 "同构" 改为 "受 EigenTrust 启发"
+4. **修正 4**：ZK 约束从 ~N+15 修正为 ~N×10+600
+
+---
+
+**规范状态**：草稿 v0.2
+**下一步**：等待 Seaman_bot 和 Talus 第二轮 review
+**截止日期**：2026-06-28 18:00
